@@ -1,0 +1,643 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #F0F4F8; /* Tom gelo */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 1000px;
+}
+
+.form-card {
+    background-color: #FFFFFF; /* Branco */
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid #E8EDF2;
+}
+
+/* ============================================ */
+/* CABEÇALHO - LOGO + TÍTULO                    */
+/* ============================================ */
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 40px;
+    padding: 10px 0;
+    position: relative;
+}
+
+.logo-empresa {
+    height: 120px;
+    width: 120px;
+    object-fit: contain;
+    flex-shrink: 0;
+    position: absolute;
+    left: 150px;           
+}
+
+.header-container .title {
+    margin-bottom: 0;
+}
+
+.title {
+    text-align: center;
+    color: #2C3E50;
+    font-size: 2.5em;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+/* ============================================ */
+/* SEÇÃO OBRA E DATA LADO A LADO                */
+/* ============================================ */
+
+.obra-data-row {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 30px;
+    align-items: flex-end;
+}
+
+.obra-field {
+    flex: 1;
+    background-color: #F8FAFC;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+}
+
+.obra-field label {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #4A5568;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.obra-field input {
+    padding: 12px 15px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 1em;
+    width: 100%;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+.obra-field input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.data-field {
+    flex: 1;
+    background-color: #F8FAFC;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+}
+
+.data-field label {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #4A5568;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.data-field input {
+    padding: 12px 15px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 1em;
+    width: 100%;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+.data-field input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* ============================================ */
+/* SEÇÃO SEPARADOR / ENCARREGADO / CONFERENTE   */
+/* ============================================ */
+
+.form-row {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 35px;
+}
+
+.form-group {
+    flex: 1;
+    background-color: #F8FAFC;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+}
+
+.form-group > label {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #4A5568;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.form-group > input {
+    padding: 12px 15px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    outline: none;
+    margin-bottom: 15px;
+    width: 100%;
+    background-color: #FFFFFF;
+}
+
+.form-group > input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.matricula-field label {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #4A5568;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.matricula-field input {
+    padding: 12px 15px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 1em;
+    width: 100%;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+.matricula-field input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* ============================================ */
+/* SEÇÃO DE MATERIAIS                           */
+/* ============================================ */
+
+.materiais-section {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #F8FAFC;
+    border-radius: 8px;
+    border: 1px solid #E2E8F0;
+}
+
+.section-title {
+    color: #2C3E50;
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+/* Botão Adicionar Material */
+.btn-add-material {
+    background-color: #48BB78;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 15px;
+}
+
+.btn-add-material:hover {
+    background-color: #38A169;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(72, 187, 120, 0.3);
+}
+
+/* Item de Material */
+.material-item {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.material-item:hover {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.material-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.material-number {
+    font-weight: 600;
+    color: #4A5568;
+    font-size: 0.9em;
+}
+
+.btn-remove-material {
+    background-color: #FC8181;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-material:hover {
+    background-color: #F56565;
+    transform: scale(1.1);
+}
+
+/* Linha de campos do material */
+.material-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr 1fr;
+    gap: 15px;
+}
+
+.material-field {
+    position: relative;
+}
+
+.material-field label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #718096;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.material-field input {
+    padding: 10px 12px;
+    border: 2px solid #E2E8F0;
+    border-radius: 6px;
+    font-size: 0.95em;
+    width: 100%;
+    transition: all 0.3s ease;
+    outline: none;
+    background-color: #FFFFFF;
+}
+
+.material-field input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.material-field input[readonly] {
+    cursor: pointer;
+}
+
+/* Input de descrição (clique para pop-up) */
+.input-descricao {
+    cursor: pointer;
+}
+
+.input-descricao[readonly] {
+    cursor: pointer;
+}
+
+/* ============================================ */
+/* POP-UP DE DESCRIÇÃO COMPLETA                 */
+/* ============================================ */
+
+.descricao-popup {
+    display: none;
+    position: fixed;
+    background-color: #2D3748;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    min-width: 200px;
+    max-width: 350px;
+    word-wrap: break-word;
+    white-space: normal;
+    z-index: 1000;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+.descricao-popup::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px;
+    border-style: solid;
+}
+
+/* Seta para baixo (pop-up acima do input) */
+.descricao-popup:not(.popup-bottom)::after {
+    top: 100%;
+    border-color: #2D3748 transparent transparent transparent;
+}
+
+/* Seta para cima (pop-up abaixo do input) */
+.descricao-popup.popup-bottom::after {
+    bottom: 100%;
+    border-color: transparent transparent #2D3748 transparent;
+}
+
+/* Animação do pop-up */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.descricao-popup.show {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Overlay para fechar pop-up ao clicar fora */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+}
+
+.popup-overlay.active {
+    display: block;
+}
+
+/* ============================================ */
+/* ALERTA DE MATERIAL NÃO CADASTRADO            */
+/* ============================================ */
+
+.alerta-material {
+    background-color: #FFF5F5;
+    border: 1px solid #FC8181;
+    border-left: 4px solid #F56565;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 15px;
+    animation: fadeInAlerta 0.3s ease-out;
+}
+
+.alerta-conteudo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #C53030;
+    font-size: 0.95em;
+}
+
+.alerta-icone {
+    font-size: 1.2em;
+}
+
+@keyframes fadeInAlerta {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* ============================================ */
+/* ESTADOS DOS INPUTS                           */
+/* ============================================ */
+
+/* Input com erro */
+.input-error {
+    border-color: #FC8181 !important;
+    background-color: #FFF5F5 !important;
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Input com sucesso */
+.input-success {
+    border-color: #48BB78 !important;
+    background-color: #F0FFF4 !important;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* ============================================ */
+/* BOTÃO ENVIAR                                 */
+/* ============================================ */
+
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: #4299E1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.submit-btn:hover {
+    background-color: #3182CE;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(66, 153, 225, 0.3);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - TABLET                      */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .header-container {
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .logo-empresa {
+        height: 45px;
+    }
+    
+    .header-container .title {
+        font-size: 2em;
+    }
+    
+    .title {
+        font-size: 2em;
+        margin-bottom: 30px;
+    }
+    
+    .form-card {
+        padding: 25px;
+    }
+    
+    /* Obra e Data empilhados */
+    .obra-data-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .obra-field,
+    .data-field {
+        flex: 1;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    /* Separador/Encarregado/Conferente empilhados */
+    .form-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .obra-field,
+    .form-group {
+        padding: 15px;
+    }
+    
+    /* Materiais */
+    .material-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .btn-add-material {
+        width: 100%;
+    }
+    
+    .descricao-popup {
+        max-width: 250px;
+        font-size: 0.85em;
+        padding: 10px 14px;
+    }
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - CELULAR                     */
+/* ============================================ */
+
+@media (max-width: 480px) {
+    .header-container {
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .logo-empresa {
+        height: 35px;
+    }
+    
+    .header-container .title {
+        font-size: 1.5em;
+    }
+    
+    .form-card {
+        padding: 15px;
+    }
+    
+    .title {
+        font-size: 1.5em;
+        margin-bottom: 20px;
+    }
+    
+    .obra-data-row {
+        gap: 15px;
+    }
+    
+    .obra-field,
+    .data-field {
+        padding: 12px;
+    }
+    
+    .obra-field label,
+    .data-field label {
+        font-size: 0.95em;
+    }
+    
+    .obra-field input,
+    .data-field input {
+        padding: 10px 12px;
+        font-size: 0.9em;
+    }
+    
+    .form-row {
+        gap: 15px;
+    }
+    
+    .form-group {
+        padding: 12px;
+    }
+    
+    /* Materiais em coluna única */
+    .material-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .submit-btn {
+        padding: 12px;
+        font-size: 1em;
+    }
+    
+    .descricao-popup {
+        max-width: 220px;
+        font-size: 0.8em;
+    }
+}
