@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SITA - Contagem Diária</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-card">
+            
+            <!-- Logo e Título -->
+            <div class="header-container">
+                <img src="../assets/img/logo-control.png" alt="Logo SITA" class="logo-empresa">
+                <h1 class="title">SITA - Contagem Diária</h1>
+            </div>
+            
+            <form id="contagemForm">
+                
+                <!-- Nome, Matrícula e Data lado a lado -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="nome">Nome *</label>
+                        <input type="text" id="nome" name="nome" placeholder="Digite seu nome" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="matricula">Matrícula *</label>
+                        <input type="text" id="matricula" name="matricula" placeholder="Digite sua matrícula" required>
+                    </div>
+
+                    <div class="data-field">
+                        <label for="data">Data</label>
+                        <input type="date" id="data" name="data" readonly>
+                    </div>
+                </div>
+
+                <!-- Seção de Materiais -->
+                <div class="materiais-section">
+                    <h2 class="section-title">Materiais</h2>
+                    
+                    <!-- Sistema de Abas -->
+                    <div class="tabs-container">
+                        <div class="tabs-nav" id="tabs-nav"></div>
+                        <div id="tabs-content"></div>
+                    </div>
+                    
+                    <div id="loading-materiais" style="text-align: center; padding: 20px; color: #718096;">
+                        ⏳ Carregando materiais...
+                    </div>
+                    
+                    <div id="mensagem" class="mensagem"></div>
+                </div>
+
+                <button type="submit" class="submit-btn">📝 Registrar Contagem</button>
+            </form>
+            
+        </div>
+        
+        <div style="text-align: center; margin-top: 1rem;">
+            <a href="../home.html" style="color: #4299E1; text-decoration: none; font-weight: 500;">← Voltar para Home</a>
+        </div>
+    </div>
+
+    <!-- Pop-up para descrição completa -->
+    <div id="descricao-popup" class="descricao-popup"></div>
+    <div id="popup-overlay" class="popup-overlay"></div>
+
+    <script>
+        // ============================================
+        // CONFIGURAÇÃO
+        // ============================================
+        
+        const API_URL = 'https://sita-api.alefe-gomes.workers.dev';
+        
+        // ============================================
+        // CATEGORIAS DE MATERIAIS
+        // ============================================
+        
+        const CATEGORIAS = {
+            'concretos': {
+                nome: 'Concretos',
+                icone: '🏗️',
+                tipo: 'predefinido',
+                codigos: [
+                    '90405', '91073', '90662', '90400', '91074',
+                    '22817', '37745', '90570', '629476', '91020',
+                    '91021', '91022', '91019', '91023', '91024',
+                    '90186', '90187', '90193', '90194', '91044',
+                    '90195', '91045', '90196', '90668', '90197',
+                    '90667', '91046', '90198', '90665', '90199',
+                    '90200', '90671', '90201', '91047', '90202',
+                    '90669', '90203', '90670'
+                ]
+            },
+            'bobinas': {
+                nome: 'Bobinas',
+                icone: '🧵',
+                tipo: 'predefinido',
+                codigos: [
+                    
+                ]
+            },
+            'trafos': {
+                nome: 'Trafos',
+                icone: '⚡',
+                tipo: 'manual',
+                codigos: []
+            }
+        };
+        
+        // ============================================
+        // PREENCHER DATA AUTOMATICAMENTE
+        // ============================================
+        
+        const dataInput = document.getElementById('data');
+        const hoje = new Date();
+        const dataFormatada = hoje.toISOString().split('T')[0];
+        dataInput.value = dataFormatada;
+        
+        // ============================================
+        // VARIÁVEIS GLOBAIS
+        // ============================================
+        
+        let materiaisBanco = [];
+        let materiaisPorCategoria = {};
+        let materiaisManuais = [];
+        let categoriaAtiva = null;
+        let codigosExistentesDB = new Set(); // Armazena códigos que já existem no banco
+        let trafosComCodigoValido = new Set(); // Armazena índices de trafos com código validado
+        
+        // ============================================
+        // CARREGAR MATERIAIS DO ARQUIVO
+        // ============================================
+        
+        async function carregarMateriais() {
+            try {
+                const response = await fetch('../data/materiais.txt');
+                const texto = await response.text();
+                
+                const linhas = texto.trim().split('\n');
+                materiaisBanco = [];
+                
+                for (let i = 0; i < linhas.length; i++) {
+                    const linha = linhas[i].trim();
+                    if (linha) {
+                        const partes = linha.split('\t');
+                        
+                        if (partes.length >= 3) {
+                            const codigo = partes[0].trim();
+                            const descricao = partes[1].trim();
+                            const und = partes[2].trim();
+                            
+                            const jaExiste = materiaisBanco.some(m => m.codigo === codigo);
+                            
+                            if (!jaExiste) {
+                                materiaisBanco.push({
+                                    codigo: codigo,
+                                    descricao: descricao,
+                                    und: und
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                console.log('📦 ' + materiaisBanco.length + ' materiais únicos carregados');
+                
+                organizarPorCategoria();
+                await carregarItensManuais();
+                criarAbas();
+                
+            } catch (error) {
+                console.error('Erro ao carregar materiais:', error);
+                document.getElementById('loading-materiais').innerHTML = 
+                    '❌ Erro ao carregar materiais. Verifique o arquivo materiais.txt';
+            }
+        }
+        
+        // ============================================
+        // CARREGAR ITENS MANUAIS DO D1 (APENAS ATIVOS)
+        // ============================================
+        
+        async function carregarItensManuais() {
+            try {
+                const response = await fetch(`${API_URL}/api/dados`);
+                const resultados = await response.json();
+                
+                const trafosMap = new Map();
+                
+                resultados.forEach(item => {
+                    // Verificar se é um trafo e está ativo
+                    const isTrafo = item.numero_serie || item.tombamento || item.oleo || item.cor;
+                    const isAtivo = item.ativo === undefined || item.ativo === 1 || item.ativo === true;
+                    
+                    if (isTrafo && isAtivo) {
+                        if (!trafosMap.has(item.codigo)) {
+                            trafosMap.set(item.codigo, {
+                                codigo: item.codigo,
+                                descricao: item.descricao,
+                                und: item.und,
+                                numero_serie: item.numero_serie,
+                                tombamento: item.tombamento,
+                                oleo: item.oleo,
+                                cor: item.cor,
+                                ativo: true
+                            });
+                        }
+                        // Adicionar ao Set de códigos existentes no banco
+                        codigosExistentesDB.add(item.codigo);
+                    }
+                });
+                
+                materiaisManuais = Array.from(trafosMap.values());
+                materiaisPorCategoria['trafos'] = materiaisManuais;
+                
+                console.log('⚡ ' + materiaisManuais.length + ' trafos ativos carregados');
+                console.log('📊 Códigos existentes no banco: ' + codigosExistentesDB.size);
+                
+            } catch (error) {
+                console.error('Erro ao carregar itens manuais:', error);
+                materiaisManuais = [];
+                materiaisPorCategoria['trafos'] = [];
+            }
+        }
+        
+        // ============================================
+        // ORGANIZAR MATERIAIS POR CATEGORIA
+        // ============================================
+        
+        function organizarPorCategoria() {
+            for (const [chave, categoria] of Object.entries(CATEGORIAS)) {
+                if (categoria.tipo === 'predefinido') {
+                    const materiais = materiaisBanco.filter(material => 
+                        categoria.codigos.includes(material.codigo)
+                    );
+                    materiais.sort((a, b) => a.codigo.localeCompare(b.codigo));
+                    materiaisPorCategoria[chave] = materiais;
+                }
+            }
+        }
+        
+        // ============================================
+        // CRIAR SISTEMA DE ABAS
+        // ============================================
+        
+        function criarAbas() {
+            const tabsNav = document.getElementById('tabs-nav');
+            const tabsContent = document.getElementById('tabs-content');
+            const loading = document.getElementById('loading-materiais');
+            
+            let htmlNav = '';
+            let htmlContent = '';
+            let primeiraCategoria = null;
+            
+            for (const [chave, categoria] of Object.entries(CATEGORIAS)) {
+                const materiais = materiaisPorCategoria[chave] || [];
+                
+                if (!primeiraCategoria) {
+                    primeiraCategoria = chave;
+                }
+                
+                htmlNav += `
+                    <button type="button" class="tab-btn" data-categoria="${chave}" onclick="ativarAba('${chave}')">
+                        <span class="tab-icone">${categoria.icone}</span>
+                        ${categoria.nome}
+                        <span class="tab-contador">${materiais.length}</span>
+                    </button>
+                `;
+                
+                htmlContent += `
+                    <div class="tab-content" id="tab-${chave}">
+                        ${chave === 'trafos' ? renderizarTrafos(materiais) : renderizarMateriaisCategoria(materiais, chave)}
+                    </div>
+                `;
+            }
+            
+            tabsNav.innerHTML = htmlNav;
+            tabsContent.innerHTML = htmlContent;
+            
+            loading.style.display = 'none';
+            
+            if (primeiraCategoria) {
+                ativarAba(primeiraCategoria);
+            }
+        }
+        
+        // ============================================
+        // ATIVAR ABA
+        // ============================================
+        
+        function ativarAba(categoria) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            const btnAtivo = document.querySelector(`.tab-btn[data-categoria="${categoria}"]`);
+            const contentAtivo = document.getElementById(`tab-${categoria}`);
+            
+            if (btnAtivo) btnAtivo.classList.add('active');
+            if (contentAtivo) contentAtivo.classList.add('active');
+            
+            categoriaAtiva = categoria;
+        }
+        
+        // ============================================
+        // VERIFICAR SE CÓDIGO EXISTE NO BANCO
+        // ============================================
+        
+        function codigoExisteNoBanco(codigo) {
+            return codigosExistentesDB.has(codigo);
+        }
+        
+        // ============================================
+        // RENDERIZAR MATERIAIS PREDEFINIDOS
+        // ============================================
+        
+        function renderizarMateriaisCategoria(materiais, categoria) {
+            if (materiais.length === 0) {
+                return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
+                    <p style="font-size: 2em;">📭</p>
+                    <p>Nenhum material configurado nesta categoria</p>
+                </div>`;
+            }
+            
+            let html = '';
+            
+            materiais.forEach((material, index) => {
+                const idUnico = `${categoria}-${index}`;
+                
+                html += `
+                    <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}">
+                        <div class="material-row">
+                            <div class="material-field">
+                                <label>Código</label>
+                                <input type="text" value="${material.codigo}" readonly class="input-readonly">
+                            </div>
+                            <div class="material-field">
+                                <label>Descrição</label>
+                                <input type="text" value="${material.descricao}" class="input-descricao" readonly>
+                            </div>
+                            <div class="material-field">
+                                <label>UND</label>
+                                <input type="text" value="${material.und}" readonly class="input-readonly">
+                            </div>
+                            <div class="material-field">
+                                <label for="qtd-${idUnico}">QTD *</label>
+                                <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
+                                    class="input-qtd" onchange="calcularDiferenca('${idUnico}', '${material.codigo}')">
+                            </div>
+                            <div class="material-field">
+                                <label>Últ. Cont.</label>
+                                <input type="text" id="qtd-anterior-${idUnico}" readonly 
+                                    class="input-readonly input-qtd-anterior" value="Carregando...">
+                            </div>
+                        </div>
+                        <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
+                        <div class="justificativa-row">
+                            <div class="material-field justificativa-field">
+                                <label for="justificativa-${idUnico}">Justificativa</label>
+                                <input type="text" id="justificativa-${idUnico}" placeholder="Justificativa..." class="input-justificativa">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            setTimeout(() => {
+                materiais.forEach((material, index) => {
+                    buscarQuantidadeAnterior(material.codigo, `${categoria}-${index}`);
+                });
+            }, 100);
+            
+            return html;
+        }
+        
+        // ============================================
+        // RENDERIZAR TRAFOS (COM CHECKBOX DE BAIXA CONDICIONAL)
+        // ============================================
+
+        function renderizarTrafos(materiais) {
+            let html = '';
+            
+            html += `<div id="trafos-container">`;
+            
+            // Filtrar apenas ativos
+            const trafosAtivos = materiais.filter(t => t.ativo !== false);
+            
+            if (trafosAtivos.length === 0) {
+                html += `<div id="trafos-vazio" style="text-align: center; padding: 20px; color: #A0AEC0;">
+                    <p style="font-size: 2em;">📭</p>
+                    <p>Nenhum trafo cadastrado. Adicione um novo item abaixo.</p>
+                </div>`;
+            }
+            
+            trafosAtivos.forEach((material, index) => {
+                const idUnico = `trafos-${index}`;
+                const codigoTrafo = material.codigo || '';
+                const existeNoBanco = codigoTrafo ? codigoExisteNoBanco(codigoTrafo) : false;
+                
+                // Verificar se este trafo tem código validado
+                const dadosValidados = buscarDadosCodigo(codigoTrafo);
+                const camposTravados = dadosValidados ? true : false;
+                
+                html += `
+                    <div class="material-item trafo-item" data-codigo="${codigoTrafo}" data-categoria="trafos" data-index="${index}">
+                        <div class="material-header">
+                            <span class="material-number">Trafo #${index + 1}</span>
+                            <div class="trafo-header-actions">
+                                ${existeNoBanco ? `
+                                <label class="checkbox-baixa-label">
+                                    <input type="checkbox" 
+                                        class="checkbox-baixa" 
+                                        data-index="${index}"
+                                        onchange="toggleBaixaTrafo(${index}, this)">
+                                    Dar baixa
+                                </label>
+                                ` : `
+                                <button type="button" 
+                                    class="btn-remover-trafo-x" 
+                                    data-index="${index}"
+                                    onclick="removerTrafo(${index})"
+                                    title="Remover este trafo">
+                                    ✕
+                                </button>
+                                `}
+                            </div>
+                        </div>
+                        
+                        <div class="material-row">
+                            <div class="material-field">
+                                <label for="trafo-codigo-${index}">Código *</label>
+                                <input type="text" id="trafo-codigo-${index}" value="${codigoTrafo}" 
+                                    placeholder="Código" class="input-trafo" required
+                                    onchange="validarCodigoTrafo(${index}, this.value)">
+                                <div id="codigo-status-${index}" class="codigo-status"></div>
+                            </div>
+                            <div class="material-field">
+                                <label for="trafo-descricao-${index}">Descrição *</label>
+                                <input type="text" id="trafo-descricao-${index}" value="${material.descricao || ''}" 
+                                    placeholder="Descrição" class="input-trafo ${camposTravados ? 'input-locked' : ''}" 
+                                    required ${camposTravados ? 'readonly' : ''}>
+                            </div>
+                            <div class="material-field">
+                                <label for="trafo-und-${index}">UND *</label>
+                                <input type="text" id="trafo-und-${index}" value="${material.und || ''}" 
+                                    placeholder="UND" class="input-trafo ${camposTravados ? 'input-locked' : ''}" 
+                                    required ${camposTravados ? 'readonly' : ''}>
+                            </div>
+                        </div>
+                        
+                        <div class="material-row material-row-extras">
+                            <div class="material-field">
+                                <label for="trafo-serie-${index}">Nº Série</label>
+                                <input type="text" id="trafo-serie-${index}" value="${material.numero_serie || ''}" 
+                                    placeholder="Nº de série" class="input-extra">
+                            </div>
+                            <div class="material-field">
+                                <label for="trafo-tombamento-${index}">Tombamento</label>
+                                <input type="text" id="trafo-tombamento-${index}" value="${material.tombamento || ''}" 
+                                    placeholder="Tombamento" class="input-extra">
+                            </div>
+                            <div class="material-field">
+                                <label for="trafo-oleo-${index}">Óleo</label>
+                                <input type="text" id="trafo-oleo-${index}" value="${material.oleo || ''}" 
+                                    placeholder="Tipo de óleo" class="input-extra">
+                            </div>
+                            <div class="material-field">
+                                <label for="trafo-cor-${index}">Cor</label>
+                                <input type="text" id="trafo-cor-${index}" value="${material.cor || ''}" 
+                                    placeholder="Cor" class="input-extra">
+                            </div>
+                        </div>
+                        
+                        <div class="material-row material-row-qtd">
+                            <div class="material-field">
+                                <label for="qtd-${idUnico}">QTD *</label>
+                                <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
+                                    class="input-qtd" onchange="calcularDiferenca('${idUnico}', '${codigoTrafo}')">
+                            </div>
+                            <div class="material-field">
+                                <label>Últ. Cont.</label>
+                                <input type="text" id="qtd-anterior-${idUnico}" readonly 
+                                    class="input-readonly input-qtd-anterior" value="Carregando...">
+                            </div>
+                        </div>
+                        
+                        <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
+                        
+                        <div class="justificativa-row">
+                            <div class="material-field justificativa-field">
+                                <label for="justificativa-${idUnico}">Justificativa</label>
+                                <input type="text" id="justificativa-${idUnico}" 
+                                    placeholder="${existeNoBanco ? 'Justificativa para este material...' : 'Justificativa...'}" 
+                                    class="input-justificativa"
+                                    ${existeNoBanco ? `oninput="verificarJustificativaBaixa(${index})"` : ''}>
+                            </div>
+                        </div>
+                        
+                        ${existeNoBanco ? `
+                        <div id="alerta-baixa-${index}" class="alerta-baixa" style="display: none;">
+                            ⚠️ Para dar baixa, preencha a justificativa.
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            
+            html += `
+                <button type="button" id="btn-add-trafo" class="btn-add-material" onclick="adicionarTrafo()">
+                    + Adicionar Novo Trafo
+                </button>
+            `;
+            
+            setTimeout(() => {
+                trafosAtivos.forEach((material, index) => {
+                    if (material.codigo) {
+                        buscarQuantidadeAnterior(material.codigo, `trafos-${index}`);
+                    }
+                });
+            }, 100);
+            
+            return html;
+        }
+        
+        // ============================================
+        // ADICIONAR TRAFO
+        // ============================================
+        
+        function adicionarTrafo() {
+            const novoTrafo = {
+                codigo: '',
+                descricao: '',
+                und: '',
+                numero_serie: '',
+                tombamento: '',
+                oleo: '',
+                cor: '',
+                ativo: true,
+                isNew: true // Marcar como novo para controle
+            };
+            
+            materiaisManuais.push(novoTrafo);
+            materiaisPorCategoria['trafos'] = materiaisManuais;
+            
+            const tabsContent = document.getElementById('tab-trafos');
+            tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
+            atualizarContadorTrafos();
+            
+            const ultimoItem = tabsContent.querySelector('.trafo-item:last-child');
+            if (ultimoItem) {
+                ultimoItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Focar no campo de código do novo trafo
+                const novoCodigoInput = ultimoItem.querySelector('.input-trafo');
+                if (novoCodigoInput) {
+                    setTimeout(() => novoCodigoInput.focus(), 300);
+                }
+            }
+        }
+        
+        // ============================================
+        // REMOVER TRAFO (APENAS TRAFOS NOVOS)
+        // ============================================
+        
+        function removerTrafo(index) {
+            const trafo = materiaisManuais[index];
+            const codigo = trafo?.codigo || '';
+            
+            // Verificar se o trafo NÃO existe no banco (é novo)
+            if (codigo && codigoExisteNoBanco(codigo)) {
+                mostrarMensagem('❌ Este trafo já está registrado no banco de dados e não pode ser removido. Use a opção "Dar baixa" para desativá-lo.', 'erro');
+                return;
+            }
+            
+            if (confirm('Tem certeza que deseja remover este trafo? Esta ação não pode ser desfeita.')) {
+                materiaisManuais.splice(index, 1);
+                materiaisPorCategoria['trafos'] = materiaisManuais;
+                
+                const tabsContent = document.getElementById('tab-trafos');
+                tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
+                atualizarContadorTrafos();
+                
+                mostrarMensagem('✅ Trafo removido com sucesso!', 'sucesso');
+            }
+        }
+        
+        // ============================================
+        // VALIDAR CÓDIGO DO TRAFO
+        // ============================================
+
+        function validarCodigoTrafo(index, codigo) {
+            const statusDiv = document.getElementById(`codigo-status-${index}`);
+            const descricaoInput = document.getElementById(`trafo-descricao-${index}`);
+            const undInput = document.getElementById(`trafo-und-${index}`);
+            
+            if (!codigo || codigo.trim() === '') {
+                if (statusDiv) statusDiv.innerHTML = '';
+                // Desbloquear inputs se o código for apagado
+                if (descricaoInput) {
+                    descricaoInput.readOnly = false;
+                    descricaoInput.classList.remove('input-locked', 'input-success', 'input-error');
+                }
+                if (undInput) {
+                    undInput.readOnly = false;
+                    undInput.classList.remove('input-locked', 'input-success', 'input-error');
+                }
+                // Atualizar dados no array
+                if (materiaisManuais[index]) {
+                    materiaisManuais[index].codigo = '';
+                    materiaisManuais[index].descricao = '';
+                    materiaisManuais[index].und = '';
+                }
+                return;
+            }
+            
+            const dados = buscarDadosCodigo(codigo.trim());
+            
+            if (dados) {
+                // Código encontrado - preencher descrição e UND
+                if (descricaoInput) {
+                    descricaoInput.value = dados.descricao;
+                    descricaoInput.readOnly = true; // Travar o input
+                    descricaoInput.classList.add('input-locked');
+                    descricaoInput.classList.add('input-success');
+                    setTimeout(() => descricaoInput.classList.remove('input-success'), 2000);
+                }
+                if (undInput) {
+                    undInput.value = dados.und;
+                    undInput.readOnly = true; // Travar o input
+                    undInput.classList.add('input-locked');
+                    undInput.classList.add('input-success');
+                    setTimeout(() => undInput.classList.remove('input-success'), 2000);
+                }
+                
+                // Atualizar materiaisManuais
+                if (materiaisManuais[index]) {
+                    materiaisManuais[index].codigo = codigo.trim();
+                    materiaisManuais[index].descricao = dados.descricao;
+                    materiaisManuais[index].und = dados.und;
+                }
+                
+                if (statusDiv) {
+                    statusDiv.innerHTML = '✅ Código encontrado - Campos bloqueados';
+                    statusDiv.className = 'codigo-status codigo-ok';
+                }
+                
+                // Buscar quantidade anterior para este código
+                buscarQuantidadeAnterior(codigo.trim(), `trafos-${index}`);
+                
+                // Recarregar a interface para atualizar o botão (dar baixa ou remover)
+                // AGORA os campos permanecerão travados porque a renderização verifica o código
+                setTimeout(() => {
+                    const tabsContent = document.getElementById('tab-trafos');
+                    if (tabsContent) {
+                        tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
+                        atualizarContadorTrafos();
+                    }
+                }, 800);
+                
+            } else {
+                // Código não encontrado - liberar para edição manual
+                if (descricaoInput) {
+                    descricaoInput.value = '';
+                    descricaoInput.readOnly = false;
+                    descricaoInput.classList.remove('input-locked');
+                    descricaoInput.classList.add('input-error');
+                    setTimeout(() => descricaoInput.classList.remove('input-error'), 2000);
+                }
+                if (undInput) {
+                    undInput.value = '';
+                    undInput.readOnly = false;
+                    undInput.classList.remove('input-locked');
+                    undInput.classList.add('input-error');
+                    setTimeout(() => undInput.classList.remove('input-error'), 2000);
+                }
+                
+                // Atualizar materiaisManuais mesmo com erro
+                if (materiaisManuais[index]) {
+                    materiaisManuais[index].codigo = codigo.trim();
+                    materiaisManuais[index].descricao = '';
+                    materiaisManuais[index].und = '';
+                }
+                
+                if (statusDiv) {
+                    statusDiv.innerHTML = '❌ Código não encontrado na base de dados';
+                    statusDiv.className = 'codigo-status codigo-erro';
+                }
+                
+                // Focar no campo de código para correção
+                const codigoInput = document.getElementById(`trafo-codigo-${index}`);
+                if (codigoInput) {
+                    setTimeout(() => codigoInput.focus(), 500);
+                }
+            }
+        }
+
+        function atualizarContadorTrafos() {
+            const btnTrafo = document.querySelector('.tab-btn[data-categoria="trafos"] .tab-contador');
+            if (btnTrafo) {
+                const ativos = materiaisManuais.filter(t => t.ativo !== false);
+                btnTrafo.textContent = ativos.length;
+            }
+        }
+        
+        // ============================================
+        // CONTROLE DE BAIXA DE TRAFO
+        // ============================================
+        
+        function toggleBaixaTrafo(index, checkbox) {
+            const justificativaInput = document.getElementById(`justificativa-trafos-${index}`);
+            const alertaDiv = document.getElementById(`alerta-baixa-${index}`);
+            
+            if (checkbox.checked) {
+                const justificativa = justificativaInput ? justificativaInput.value.trim() : '';
+                
+                if (!justificativa) {
+                    checkbox.checked = false;
+                    if (alertaDiv) {
+                        alertaDiv.style.display = 'block';
+                        setTimeout(() => { alertaDiv.style.display = 'none'; }, 3000);
+                    }
+                    if (justificativaInput) {
+                        justificativaInput.classList.add('input-error');
+                        justificativaInput.focus();
+                        setTimeout(() => justificativaInput.classList.remove('input-error'), 2000);
+                    }
+                }
+            }
+        }
+        
+        // ============================================
+        // BUSCAR DADOS DO CÓDIGO NO materiais.txt
+        // ============================================
+
+        function buscarDadosCodigo(codigo) {
+            if (!codigo || !materiaisBanco.length) return null;
+            
+            const material = materiaisBanco.find(m => m.codigo === codigo.trim());
+            return material || null;
+        }
+
+        function verificarJustificativaBaixa(index) {
+            const justificativaInput = document.getElementById(`justificativa-trafos-${index}`);
+            const checkbox = document.querySelector(`.checkbox-baixa[data-index="${index}"]`);
+            const alertaDiv = document.getElementById(`alerta-baixa-${index}`);
+            
+            if (justificativaInput && justificativaInput.value.trim() && checkbox && checkbox.checked) {
+                if (alertaDiv) alertaDiv.style.display = 'none';
+            }
+        }
+        
+        // Carregar materiais ao iniciar
+        carregarMateriais();
+        
+        // ============================================
+        // POP-UP DE DESCRIÇÃO
+        // ============================================
+        
+        const descricaoPopup = document.getElementById('descricao-popup');
+        const popupOverlay = document.getElementById('popup-overlay');
+        
+        function mostrarDescricaoPopup(input, texto) {
+            const rect = input.getBoundingClientRect();
+            descricaoPopup.textContent = texto;
+            descricaoPopup.className = 'descricao-popup show';
+            descricaoPopup.style.left = rect.left + (rect.width / 2) + 'px';
+            descricaoPopup.style.top = (rect.top - descricaoPopup.offsetHeight - 10) + 'px';
+            popupOverlay.classList.add('active');
+        }
+        
+        function fecharDescricaoPopup() {
+            descricaoPopup.classList.remove('show');
+            popupOverlay.classList.remove('active');
+        }
+        
+        popupOverlay.addEventListener('click', fecharDescricaoPopup);
+        
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('input-descricao')) {
+                const descricao = e.target.value;
+                if (descricao && descricao.trim() !== '') {
+                    mostrarDescricaoPopup(e.target, descricao);
+                }
+            }
+        });
+        
+        // ============================================
+        // ENVIAR FORMULÁRIO
+        // ============================================
+        
+        document.getElementById('contagemForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const mensagemDiv = document.getElementById('mensagem');
+            const botaoSubmit = e.target.querySelector('.submit-btn');
+            
+            const nome = document.getElementById('nome').value;
+            const matricula = document.getElementById('matricula').value;
+            const data = document.getElementById('data').value;
+            
+            if (!nome.trim()) {
+                mostrarMensagem('❌ Por favor, preencha o nome!', 'erro');
+                return;
+            }
+            
+            const materiaisEnviar = [];
+            const inputsQtd = document.querySelectorAll('.input-qtd');
+            let temErroValidacao = false;
+            
+            inputsQtd.forEach(input => {
+                const qtd = parseFloat(input.value);
+                if (!isNaN(qtd) && qtd > 0) {
+                    const materialItem = input.closest('.material-item');
+                    const codigo = materialItem.dataset.codigo;
+                    const categoria = materialItem.dataset.categoria;
+                    
+                    const justificativaInput = materialItem.querySelector('.input-justificativa');
+                    const justificativa = justificativaInput ? justificativaInput.value : '';
+                    
+                    if (categoria === 'trafos') {
+                        const index = materialItem.dataset.index;
+                        const checkboxBaixa = materialItem.querySelector('.checkbox-baixa');
+                        const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
+                        
+                        const codigoTrafo = document.getElementById(`trafo-codigo-${index}`)?.value || codigo;
+                        const descricaoTrafo = document.getElementById(`trafo-descricao-${index}`)?.value || '';
+                        const undTrafo = document.getElementById(`trafo-und-${index}`)?.value || '';
+                        
+                        // Validar se o código existe na base
+                        const dadosCodigo = buscarDadosCodigo(codigoTrafo);
+                        if (!dadosCodigo) {
+                            mostrarMensagem('❌ O código "' + codigoTrafo + '" do Trafo #' + (parseInt(index) + 1) + ' não foi encontrado na base de dados!', 'erro');
+                            // Destacar o campo problemático
+                            const codigoInput = document.getElementById(`trafo-codigo-${index}`);
+                            if (codigoInput) {
+                                codigoInput.classList.add('input-error');
+                                codigoInput.focus();
+                                setTimeout(() => codigoInput.classList.remove('input-error'), 3000);
+                            }
+                            temErroValidacao = true;
+                            return; // Apenas pula este material, sem afetar os outros
+                        }
+                        
+                        const serie = document.getElementById(`trafo-serie-${index}`)?.value || null;
+                        const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || null;
+                        const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || null;
+                        const cor = document.getElementById(`trafo-cor-${index}`)?.value || null;
+                        
+                        if (materiaisManuais[index]) {
+                            materiaisManuais[index].codigo = codigoTrafo;
+                            materiaisManuais[index].descricao = descricaoTrafo;
+                            materiaisManuais[index].und = undTrafo;
+                            materiaisManuais[index].numero_serie = serie;
+                            materiaisManuais[index].tombamento = tombamento;
+                            materiaisManuais[index].oleo = oleo;
+                            materiaisManuais[index].cor = cor;
+                            materiaisManuais[index].ativo = !darBaixa;
+                        }
+                        
+                        materiaisEnviar.push({
+                            nome, matricula, data,
+                            codigo: codigoTrafo,
+                            descricao: descricaoTrafo,
+                            und: undTrafo,
+                            qtd,
+                            numero_serie: serie,
+                            tombamento,
+                            oleo,
+                            cor,
+                            obs: justificativa || `Contagem diária - ${nome}`,
+                            ativo: darBaixa ? 0 : 1
+                        });
+                        
+                    } else {
+                        const materiaisDaCategoria = materiaisPorCategoria[categoria] || [];
+                        const material = materiaisDaCategoria.find(m => m.codigo === codigo);
+                        
+                        if (material) {
+                            materiaisEnviar.push({
+                                nome, matricula, data,
+                                codigo: material.codigo,
+                                descricao: material.descricao,
+                                und: material.und,
+                                qtd,
+                                numero_serie: null,
+                                tombamento: null,
+                                oleo: null,
+                                cor: null,
+                                obs: justificativa || `Contagem diária - ${nome}`,
+                                ativo: 1
+                            });
+                        }
+                    }
+                }
+            });
+            
+            // Verificar se houve erro de validação
+            if (temErroValidacao) {
+                return; // Interrompe o envio se algum código de trafo não for válido
+            }
+            
+            if (materiaisEnviar.length === 0) {
+                mostrarMensagem('❌ Preencha a quantidade de pelo menos um material!', 'erro');
+                return;
+            }
+            
+            try {
+                botaoSubmit.disabled = true;
+                botaoSubmit.textContent = 'Enviando...';
+                mostrarMensagem('⏳ Salvando ' + materiaisEnviar.length + ' material(is)...', 'info');
+                
+                const resultados = [];
+                for (const material of materiaisEnviar) {
+                    const response = await fetch(`${API_URL}/api/salvar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(material)
+                    });
+                    
+                    const resultado = await response.json();
+                    resultados.push({ 
+                        codigo: material.codigo, 
+                        ok: response.ok, 
+                        ...resultado 
+                    });
+                }
+                
+                const todosSalvos = resultados.every(r => r.ok);
+                
+                if (todosSalvos) {
+                    const baixas = materiaisEnviar.filter(m => m.ativo === 0).length;
+                    let msg = '✅ ' + resultados.length + ' material(is) registrado(s) com sucesso!';
+                    if (baixas > 0) {
+                        msg += ' (' + baixas + ' baixa(s) realizada(s))';
+                    }
+                    mostrarMensagem(msg, 'sucesso');
+                    
+                    document.querySelectorAll('.input-qtd').forEach(input => input.value = '');
+                    document.querySelectorAll('.input-justificativa').forEach(input => input.value = '');
+                    document.querySelectorAll('.diferenca-indicador').forEach(div => div.style.display = 'none');
+                    document.querySelectorAll('.checkbox-baixa').forEach(cb => cb.checked = false);
+                    
+                    // Recarregar itens manuais para refletir baixas
+                    setTimeout(async () => {
+                        await carregarItensManuais();
+                        const tabsContent = document.getElementById('tab-trafos');
+                        if (tabsContent && categoriaAtiva === 'trafos') {
+                            tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
+                            atualizarContadorTrafos();
+                        }
+                    }, 500);
+                    
+                } else {
+                    const erros = resultados.filter(r => !r.ok);
+                    mostrarMensagem('⚠️ Erro ao salvar: ' + erros.map(e => e.codigo).join(', '), 'erro');
+                }
+                
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarMensagem('❌ Erro de conexão com o servidor.', 'erro');
+                
+            } finally {
+                botaoSubmit.disabled = false;
+                botaoSubmit.textContent = '📝 Registrar Contagem';
+            }
+        });
+        
+        // ============================================
+        // BUSCAR QUANTIDADE DO DIA ANTERIOR
+        // ============================================
+        
+        async function buscarQuantidadeAnterior(codigo, idUnico) {
+            const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
+            if (!inputAnterior || !codigo) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/contagem-anterior`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codigo, data_atual: dataFormatada })
+                });
+                
+                const resultado = await response.json();
+                
+                if (resultado.encontrado) {
+                    inputAnterior.value = resultado.qtd_anterior;
+                    inputAnterior.title = `Última contagem: ${formatarData(resultado.data_anterior)}`;
+                    inputAnterior.classList.add('tem-dado-anterior');
+                } else {
+                    inputAnterior.value = '0';
+                    inputAnterior.title = 'Nenhuma contagem anterior encontrada';
+                    inputAnterior.classList.add('sem-dado-anterior');
+                }
+                
+            } catch (error) {
+                inputAnterior.value = '0';
+            }
+        }
+        
+        // ============================================
+        // CALCULAR DIFERENÇA
+        // ============================================
+        
+        function calcularDiferenca(idUnico, codigo) {
+            const inputQtd = document.getElementById(`qtd-${idUnico}`);
+            const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
+            const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
+            
+            if (!inputQtd || !inputAnterior || !diferencaDiv) return;
+            
+            const qtdAtual = parseFloat(inputQtd.value);
+            const qtdAnterior = parseFloat(inputAnterior.value);
+            
+            if (isNaN(qtdAtual) || isNaN(qtdAnterior)) {
+                diferencaDiv.style.display = 'none';
+                return;
+            }
+            
+            const diferenca = qtdAtual - qtdAnterior;
+            
+            if (diferenca === 0) {
+                diferencaDiv.style.display = 'flex';
+                diferencaDiv.className = 'diferenca-indicador diferenca-igual';
+                diferencaDiv.innerHTML = '✓ Sem alteração';
+            } else if (diferenca > 0) {
+                diferencaDiv.style.display = 'flex';
+                diferencaDiv.className = 'diferenca-indicador diferenca-positiva';
+                diferencaDiv.innerHTML = `▲ +${diferenca.toFixed(2)} a mais`;
+            } else {
+                diferencaDiv.style.display = 'flex';
+                diferencaDiv.className = 'diferenca-indicador diferenca-negativa';
+                diferencaDiv.innerHTML = `▼ ${diferenca.toFixed(2)} a menos`;
+            }
+        }
+        
+        function formatarData(dataString) {
+            if (!dataString) return '';
+            const data = new Date(dataString + 'T00:00:00');
+            return data.toLocaleDateString('pt-BR');
+        }
+        
+        function mostrarMensagem(texto, tipo) {
+            const mensagemDiv = document.getElementById('mensagem');
+            mensagemDiv.textContent = texto;
+            mensagemDiv.className = 'mensagem ' + tipo;
+            mensagemDiv.style.display = 'block';
+            mensagemDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            if (tipo === 'sucesso') {
+                setTimeout(() => { mensagemDiv.style.display = 'none'; }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
