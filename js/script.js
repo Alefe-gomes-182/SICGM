@@ -11,7 +11,7 @@ let databaseColaboradores = [];
 // Função para carregar colaboradores do arquivo de texto
 async function carregarColaboradores() {
     try {
-        const response = await fetch('../data/colaboradores.txt');
+        const response = await fetch('/SICGM/data/colaboradores.txt');
         
         if (!response.ok) {
             throw new Error('Arquivo de colaboradores não encontrado');
