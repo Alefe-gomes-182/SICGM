@@ -3,6 +3,8 @@
 // ============================================
 
 let databaseColaboradores = [];
+let materiaisCarregados = false;
+let cacheQuantidades = {};
 
 // ============================================
 // FUNÇÕES DE LOGIN
@@ -124,9 +126,6 @@ function logout() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Iniciando sistema de login...');
     
-    // ✅ REMOVIDO: Não redirecionar automaticamente para HOME
-    // Deixe o usuário fazer login manualmente
-    
     // Carregar colaboradores
     carregarColaboradores().then(() => {
         console.log('✅ Sistema pronto para login');
@@ -209,3 +208,329 @@ window.sair = function() {
 
 window.verificarSessao = verificarSessao;
 window.logout = logout;
+
+// ============================================
+// FUNÇÕES PARA PÁGINA DE CONTAGEM DIÁRIA
+// ============================================
+
+// Função para carregar materiais de forma otimizada
+async function carregarMateriaisOtimizado() {
+    if (materiaisCarregados) return;
+    
+    const loadingDiv = document.getElementById('loading-materiais');
+    if (loadingDiv) loadingDiv.style.display = 'block';
+    
+    try {
+        // 1. Carregar materiais do arquivo
+        const response = await fetch('../data/materiais.txt');
+        const texto = await response.text();
+        
+        // 2. Processar em background
+        await new Promise(resolve => {
+            setTimeout(() => {
+                processarMateriais(texto);
+                resolve();
+            }, 50);
+        });
+        
+        // 3. Carregar trafos
+        await carregarItensManuais();
+        
+        // 4. Criar abas otimizadas
+        criarAbasOtimizado();
+        
+        materiaisCarregados = true;
+        
+    } catch (error) {
+        console.error('Erro ao carregar materiais:', error);
+        if (loadingDiv) {
+            loadingDiv.innerHTML = '❌ Erro ao carregar materiais. Tente novamente.';
+        }
+    }
+}
+
+// Função para processar materiais
+function processarMateriais(texto) {
+    const linhas = texto.trim().split('\n');
+    materiaisBanco = [];
+    
+    for (let i = 0; i < linhas.length; i++) {
+        const linha = linhas[i].trim();
+        if (linha) {
+            const partes = linha.split('\t');
+            if (partes.length >= 3) {
+                const codigo = partes[0].trim();
+                const descricao = partes[1].trim();
+                const und = partes[2].trim();
+                
+                const jaExiste = materiaisBanco.some(m => m.codigo === codigo);
+                if (!jaExiste) {
+                    materiaisBanco.push({ codigo, descricao, und });
+                }
+            }
+        }
+    }
+    
+    console.log('📦 ' + materiaisBanco.length + ' materiais únicos carregados');
+    organizarPorCategoria();
+}
+
+// Função para carregar itens manuais do D1
+async function carregarItensManuais() {
+    try {
+        const response = await fetch('https://sita-api.alefe-gomes.workers.dev/api/dados');
+        const resultados = await response.json();
+        
+        const trafosMap = new Map();
+        codigosExistentesDB = new Set();
+        
+        resultados.forEach(item => {
+            const isTrafo = item.numero_serie || item.tombamento || item.oleo || item.cor;
+            const isAtivo = item.ativo === undefined || item.ativo === 1 || item.ativo === true;
+            
+            if (isTrafo && isAtivo) {
+                codigosExistentesDB.add(item.codigo);
+                if (!trafosMap.has(item.codigo)) {
+                    trafosMap.set(item.codigo, {
+                        codigo: item.codigo,
+                        descricao: item.descricao,
+                        und: item.und,
+                        numero_serie: item.numero_serie,
+                        tombamento: item.tombamento,
+                        oleo: item.oleo,
+                        cor: item.cor,
+                        ativo: true
+                    });
+                }
+            }
+        });
+        
+        materiaisManuais = Array.from(trafosMap.values());
+        materiaisPorCategoria['trafos'] = materiaisManuais;
+        
+        console.log('⚡ ' + materiaisManuais.length + ' trafos ativos carregados');
+        console.log('📊 ' + codigosExistentesDB.size + ' códigos existentes no banco');
+        
+    } catch (error) {
+        console.error('Erro ao carregar itens manuais:', error);
+        materiaisManuais = [];
+        materiaisPorCategoria['trafos'] = [];
+    }
+}
+
+// ============================================
+// FUNÇÕES DE RENDERIZAÇÃO OTIMIZADA
+// ============================================
+
+// Criar abas sem renderizar conteúdo
+function criarAbasOtimizado() {
+    const tabsNav = document.getElementById('tabs-nav');
+    const tabsContent = document.getElementById('tabs-content');
+    const loading = document.getElementById('loading-materiais');
+    
+    let htmlNav = '';
+    let htmlContent = '';
+    let primeiraCategoria = null;
+    
+    for (const [chave, categoria] of Object.entries(CATEGORIAS)) {
+        const materiais = materiaisPorCategoria[chave] || [];
+        
+        if (!primeiraCategoria) primeiraCategoria = chave;
+        
+        htmlNav += `
+            <button type="button" class="tab-btn" data-categoria="${chave}" onclick="ativarAbaOtimizado('${chave}')">
+                <span class="tab-icone">${categoria.icone}</span>
+                ${categoria.nome}
+                <span class="tab-contador">${materiais.length}</span>
+            </button>
+        `;
+        
+        htmlContent += `
+            <div class="tab-content" id="tab-${chave}">
+                <div class="loading-aba" style="text-align:center; padding:20px; color:#718096;">
+                    ⏳ Carregando ${categoria.nome}...
+                </div>
+            </div>
+        `;
+    }
+    
+    tabsNav.innerHTML = htmlNav;
+    tabsContent.innerHTML = htmlContent;
+    if (loading) loading.style.display = 'none';
+    
+    // Renderizar a primeira aba automaticamente
+    if (primeiraCategoria) {
+        renderizarAba(primeiraCategoria);
+        ativarAba(primeiraCategoria);
+    }
+}
+
+// Renderizar apenas a aba ativa
+function renderizarAba(categoria) {
+    const tabContent = document.getElementById(`tab-${categoria}`);
+    if (!tabContent) return;
+    
+    const materiais = materiaisPorCategoria[categoria] || [];
+    
+    if (categoria === 'trafos') {
+        tabContent.innerHTML = renderizarTrafos(materiais);
+    } else {
+        tabContent.innerHTML = renderizarMateriaisCategoria(materiais, categoria);
+    }
+    
+    // Carregar quantidades anteriores apenas para os itens visíveis
+    setTimeout(() => {
+        carregarQuantidadesVisiveis(categoria);
+    }, 100);
+}
+
+// Ativar aba com lazy loading
+function ativarAbaOtimizado(categoria) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    const btnAtivo = document.querySelector(`.tab-btn[data-categoria="${categoria}"]`);
+    const contentAtivo = document.getElementById(`tab-${categoria}`);
+    
+    if (btnAtivo) btnAtivo.classList.add('active');
+    if (contentAtivo) contentAtivo.classList.add('active');
+    
+    categoriaAtiva = categoria;
+    
+    // Verificar se o conteúdo já foi renderizado
+    const loadingAba = contentAtivo?.querySelector('.loading-aba');
+    if (loadingAba) {
+        renderizarAba(categoria);
+    } else {
+        carregarQuantidadesVisiveis(categoria);
+    }
+}
+
+// Carregar quantidades apenas para itens visíveis (com cache)
+function carregarQuantidadesVisiveis(categoria) {
+    const tabContent = document.getElementById(`tab-${categoria}`);
+    if (!tabContent) return;
+    
+    const itens = tabContent.querySelectorAll('.material-item');
+    itens.forEach(item => {
+        const codigo = item.dataset.codigo;
+        const idUnico = item.id?.replace('item-', '') || '';
+        if (codigo && idUnico) {
+            buscarQuantidadeAnteriorComCache(codigo, idUnico);
+        }
+    });
+}
+
+// Buscar quantidade anterior com cache
+async function buscarQuantidadeAnteriorComCache(codigo, idUnico) {
+    const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
+    if (!inputAnterior || !codigo) return;
+    
+    // Verificar cache
+    if (cacheQuantidades[codigo]) {
+        const dados = cacheQuantidades[codigo];
+        inputAnterior.value = dados.qtd || '0';
+        inputAnterior.title = dados.data ? `Última contagem: ${formatarData(dados.data)}` : 'Sem dados';
+        inputAnterior.classList.add(dados.qtd ? 'tem-dado-anterior' : 'sem-dado-anterior');
+        return;
+    }
+    
+    try {
+        const dataFormatada = document.getElementById('data')?.value || new Date().toISOString().split('T')[0];
+        const response = await fetch('https://sita-api.alefe-gomes.workers.dev/api/contagem-anterior', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo, data_atual: dataFormatada })
+        });
+        
+        const resultado = await response.json();
+        
+        cacheQuantidades[codigo] = {
+            qtd: resultado.encontrado ? resultado.qtd_anterior : '0',
+            data: resultado.encontrado ? resultado.data_anterior : null
+        };
+        
+        if (resultado.encontrado) {
+            inputAnterior.value = resultado.qtd_anterior;
+            inputAnterior.title = `Última contagem: ${formatarData(resultado.data_anterior)}`;
+            inputAnterior.classList.add('tem-dado-anterior');
+        } else {
+            inputAnterior.value = '0';
+            inputAnterior.title = 'Nenhuma contagem anterior encontrada';
+            inputAnterior.classList.add('sem-dado-anterior');
+        }
+        
+    } catch (error) {
+        inputAnterior.value = '0';
+    }
+}
+
+// Função auxiliar para formatar data
+function formatarData(dataString) {
+    if (!dataString) return '';
+    const data = new Date(dataString + 'T00:00:00');
+    return data.toLocaleDateString('pt-BR');
+}
+
+// ============================================
+// INICIALIZAR CONTAGEM DIÁRIA
+// ============================================
+
+// Verificar se estamos na página de contagem diária
+if (document.getElementById('contagemForm')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Preencher data automaticamente
+        const dataInput = document.getElementById('data');
+        if (dataInput) {
+            const hoje = new Date();
+            dataInput.value = hoje.toISOString().split('T')[0];
+        }
+        
+        // Carregar materiais de forma otimizada
+        carregarMateriaisOtimizado();
+    });
+}
+
+// ============================================
+// FUNÇÕES DE POP-UP (mantidas do original)
+// ============================================
+
+const descricaoPopup = document.getElementById('descricao-popup');
+const popupOverlay = document.getElementById('popup-overlay');
+
+function mostrarDescricaoPopup(input, texto) {
+    if (!descricaoPopup) return;
+    const rect = input.getBoundingClientRect();
+    descricaoPopup.textContent = texto;
+    descricaoPopup.className = 'descricao-popup show';
+    descricaoPopup.style.left = rect.left + (rect.width / 2) + 'px';
+    descricaoPopup.style.top = (rect.top - descricaoPopup.offsetHeight - 10) + 'px';
+    if (popupOverlay) popupOverlay.classList.add('active');
+}
+
+function fecharDescricaoPopup() {
+    if (descricaoPopup) descricaoPopup.classList.remove('show');
+    if (popupOverlay) popupOverlay.classList.remove('active');
+}
+
+if (popupOverlay) {
+    popupOverlay.addEventListener('click', fecharDescricaoPopup);
+}
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('input-descricao')) {
+        const descricao = e.target.value;
+        if (descricao && descricao.trim() !== '') {
+            mostrarDescricaoPopup(e.target, descricao);
+        }
+    }
+});
+
+// ============================================
+// EXPOR FUNÇÕES ADICIONAIS
+// ============================================
+
+window.ativarAbaOtimizado = ativarAbaOtimizado;
+window.carregarMateriaisOtimizado = carregarMateriaisOtimizado;
+window.buscarQuantidadeAnteriorComCache = buscarQuantidadeAnteriorComCache;
+window.formatarData = formatarData;
