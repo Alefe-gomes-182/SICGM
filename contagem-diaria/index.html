@@ -72,7 +72,8 @@
         // CONFIGURAÇÃO
         // ============================================
         
-        const API_URL = 'https://sita-api.alefe-gomes.workers.dev';
+        // ✅ CORRIGIDO: URL da nova API
+        const API_URL = 'https://noisy-snow-0359.alefe-gomes-72f.workers.dev';
         
         // ============================================
         // CATEGORIAS DE MATERIAIS
@@ -184,7 +185,8 @@
         
         async function carregarItensManuais() {
             try {
-                const response = await fetch(`${API_URL}/api/dados`);
+                // ✅ CORRIGIDO: URL da nova API
+                const response = await fetch('https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api/dados');
                 const resultados = await response.json();
                 
                 const trafosMap = new Map();
@@ -913,7 +915,8 @@
                 
                 const resultados = [];
                 for (const material of materiaisEnviar) {
-                    const response = await fetch(`${API_URL}/api/salvar`, {
+                    // ✅ CORRIGIDO: Usando a nova URL da API
+                    const response = await fetch('https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api/salvar', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(material)
@@ -976,7 +979,8 @@
             if (!inputAnterior || !codigo) return;
             
             try {
-                const response = await fetch(`${API_URL}/api/contagem-anterior`, {
+                // ✅ CORRIGIDO: Usando a nova URL da API
+                const response = await fetch('https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api/contagem-anterior', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ codigo, data_atual: dataFormatada })
@@ -995,6 +999,7 @@
                 }
                 
             } catch (error) {
+                console.error('Erro ao buscar quantidade anterior:', error);
                 inputAnterior.value = '0';
             }
         }

@@ -275,10 +275,15 @@ function processarMateriais(texto) {
     organizarPorCategoria();
 }
 
+// ============================================
+// FUNÇÃO CORRIGIDA: carregarItensManuais
+// ============================================
+
 // Função para carregar itens manuais do D1
 async function carregarItensManuais() {
     try {
-        const response = await fetch('https://sita-api.alefe-gomes.workers.dev/api/dados');
+        // ✅ CORRIGIDO: URL correta da API
+        const response = await fetch('https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api/dados');
         const resultados = await response.json();
         
         const trafosMap = new Map();
@@ -421,6 +426,10 @@ function carregarQuantidadesVisiveis(categoria) {
     });
 }
 
+// ============================================
+// FUNÇÃO CORRIGIDA: buscarQuantidadeAnteriorComCache
+// ============================================
+
 // Buscar quantidade anterior com cache
 async function buscarQuantidadeAnteriorComCache(codigo, idUnico) {
     const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
@@ -437,7 +446,8 @@ async function buscarQuantidadeAnteriorComCache(codigo, idUnico) {
     
     try {
         const dataFormatada = document.getElementById('data')?.value || new Date().toISOString().split('T')[0];
-        const response = await fetch('https://sita-api.alefe-gomes.workers.dev/api/contagem-anterior', {
+        // ✅ CORRIGIDO: URL correta da API
+        const response = await fetch('https://noisy-snow-0359.alefe-gomes-72f.workers.dev/api/contagem-anterior', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ codigo, data_atual: dataFormatada })
@@ -461,6 +471,7 @@ async function buscarQuantidadeAnteriorComCache(codigo, idUnico) {
         }
         
     } catch (error) {
+        console.error('Erro ao buscar quantidade anterior:', error);
         inputAnterior.value = '0';
     }
 }
