@@ -11,7 +11,7 @@ let databaseColaboradores = [];
 // Função para carregar colaboradores do arquivo de texto
 async function carregarColaboradores() {
     try {
-        const response = await fetch('../DATA/colaboradores.txt');
+        const response = await fetch('../data/colaboradores.txt');
         
         if (!response.ok) {
             throw new Error('Arquivo de colaboradores não encontrado');
@@ -122,7 +122,7 @@ function validarAcessoHome() {
     const sessao = verificarSessao();
     if (!sessao) {
         console.log('🔒 Sessão inválida ou expirada - Redirecionando para login');
-        window.location.href = 'INDEX.HTML';
+        window.location.href = 'index.html';
         return false;
     }
     return true;
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sessao) {
         console.log('👤 Sessão ativa encontrada para:', sessao.nome);
         // Redirecionar para home se já estiver logado
-        window.location.href = 'HOME.HTML';
+        window.location.href = 'home.html';
         return;
     }
     
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Redirecionar para a home
                 setTimeout(() => {
-                    window.location.href = 'HOME.HTML';
+                    window.location.href = 'home.html';
                 }, 800);
             } else {
                 // Login falhou
