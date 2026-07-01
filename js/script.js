@@ -139,20 +139,20 @@ function logout() {
 }
 
 // ============================================
-// FUNÇÃO PARA REDIRECIONAR SEGUNDO PERFIL
+// FUNÇÃO CORRIGIDA PARA REDIRECIONAR SEGUNDO PERFIL
 // ============================================
 
 function redirecionarPorPerfil(perfil) {
-    // Mapeamento de perfil para página home
+    // Mapeamento de perfil para página home (nomes SEM ESPAÇOS)
     const homeMap = {
-        'OPERACIONAL': 'home - operacional.html',
-        'GESTAO': 'home - gestao.html',
-        'VISUALIZACAO': 'home - visualizacao.html'
+        'OPERACIONAL': 'home-operacional.html',
+        'GESTAO': 'home-gestao.html',
+        'VISUALIZACAO': 'home-visualizacao.html'
     };
     
     // Normalizar perfil (maiúsculo e sem espaços)
     const perfilNormalizado = perfil.toUpperCase().trim();
-    const homePage = homeMap[perfilNormalizado] || 'home.html';
+    const homePage = homeMap[perfilNormalizado] || 'index.html';
     
     console.log(`🔀 Redirecionando para: ${homePage} (Perfil: ${perfilNormalizado})`);
     
