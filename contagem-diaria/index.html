@@ -22,12 +22,12 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="nome">Nome *</label>
-                        <input type="text" id="nome" name="nome" placeholder="Digite seu nome" required>
+                        <input type="text" id="nome" name="nome" placeholder="Digite seu nome" required readonly>
                     </div>
 
                     <div class="form-group">
                         <label for="matricula">Matrícula *</label>
-                        <input type="text" id="matricula" name="matricula" placeholder="Digite sua matrícula" required>
+                        <input type="text" id="matricula" name="matricula" placeholder="Digite sua matrícula" required readonly>
                     </div>
 
                     <div class="data-field">
@@ -111,7 +111,7 @@
         };
         
         // ============================================
-        // PREENCHER DATA AUTOMATICAMENTE
+        // PREENCHER DATA E DADOS DO USUÁRIO
         // ============================================
         
         const dataInput = document.getElementById('data');
@@ -119,6 +119,64 @@
         const dataFormatada = hoje.toISOString().split('T')[0];
         dataInput.value = dataFormatada;
         
+        // Carregar dados do usuário logado
+        function carregarDadosUsuario() {
+            try {
+                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado'));
+                if (usuarioLogado) {
+                    document.getElementById('nome').value = usuarioLogado.nome || '';
+                    document.getElementById('matricula').value = usuarioLogado.matricula || '';
+                } else {
+                    // Fallback: tentar carregar do arquivo de colaboradores
+                    carregarColaboradores();
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados do usuário:', error);
+                carregarColaboradores();
+            }
+        }
+
+        async function carregarColaboradores() {
+            try {
+                const response = await fetch('../data/colaboradores.txt');
+                const texto = await response.text();
+                const linhas = texto.trim().split('\n');
+                
+                // Procura pelo colaborador ativo (último login ou marcado como ativo)
+                for (let i = 0; i < linhas.length; i++) {
+                    const linha = linhas[i].trim();
+                    if (linha) {
+                        const partes = linha.split('\t');
+                        if (partes.length >= 2) {
+                            // Se o arquivo tiver um marcador de ativo (ex: * no início)
+                            if (linha.startsWith('*')) {
+                                const nome = partes[0].replace('*', '').trim();
+                                const matricula = partes[1].trim();
+                                document.getElementById('nome').value = nome;
+                                document.getElementById('matricula').value = matricula;
+                                return;
+                            }
+                        }
+                    }
+                }
+                
+                // Se não encontrou marcador, pega o primeiro
+                if (linhas.length > 0) {
+                    const primeiraLinha = linhas[0].trim();
+                    const partes = primeiraLinha.split('\t');
+                    if (partes.length >= 2) {
+                        document.getElementById('nome').value = partes[0].trim();
+                        document.getElementById('matricula').value = partes[1].trim();
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar colaboradores:', error);
+                // Deixar campos vazios para o usuário preencher manualmente
+                document.getElementById('nome').removeAttribute('readonly');
+                document.getElementById('matricula').removeAttribute('readonly');
+            }
+        }
+
         // ============================================
         // VARIÁVEIS GLOBAIS
         // ============================================
@@ -409,6 +467,7 @@
                 const idUnico = `bobinas-${index}`;
                 const codigoBobina = material.codigo || '';
                 const existeNoBanco = codigoBobina ? codigoExisteNoBanco(codigoBobina) : false;
+                const temDescricao = material.descricao && material.descricao.trim() !== '';
                 
                 html += `
                     <div class="material-item bobina-item" data-codigo="${codigoBobina}" data-categoria="bobinas" data-index="${index}">
@@ -446,12 +505,14 @@
                             <div class="material-field">
                                 <label for="bobina-descricao-${index}">Descrição *</label>
                                 <input type="text" id="bobina-descricao-${index}" value="${material.descricao || ''}" 
-                                    placeholder="Descrição" class="input-trafo" required>
+                                    placeholder="Descrição" class="input-descricao" 
+                                    ${temDescricao ? 'readonly' : ''} required>
                             </div>
                             <div class="material-field">
                                 <label for="bobina-und-${index}">UND *</label>
                                 <input type="text" id="bobina-und-${index}" value="${material.und || ''}" 
-                                    placeholder="UND" class="input-trafo" required>
+                                    placeholder="UND" class="input-readonly" 
+                                    ${temDescricao ? 'readonly' : ''} required>
                             </div>
                         </div>
                         
@@ -538,6 +599,7 @@
                 const idUnico = `trafos-${index}`;
                 const codigoTrafo = material.codigo || '';
                 const existeNoBanco = codigoTrafo ? codigoExisteNoBanco(codigoTrafo) : false;
+                const temDescricao = material.descricao && material.descricao.trim() !== '';
                 
                 html += `
                     <div class="material-item trafo-item" data-codigo="${codigoTrafo}" data-categoria="trafos" data-index="${index}">
@@ -575,12 +637,14 @@
                             <div class="material-field">
                                 <label for="trafo-descricao-${index}">Descrição *</label>
                                 <input type="text" id="trafo-descricao-${index}" value="${material.descricao || ''}" 
-                                    placeholder="Descrição" class="input-trafo" required>
+                                    placeholder="Descrição" class="input-descricao" 
+                                    ${temDescricao ? 'readonly' : ''} required>
                             </div>
                             <div class="material-field">
                                 <label for="trafo-und-${index}">UND *</label>
                                 <input type="text" id="trafo-und-${index}" value="${material.und || ''}" 
-                                    placeholder="UND" class="input-trafo" required>
+                                    placeholder="UND" class="input-readonly" 
+                                    ${temDescricao ? 'readonly' : ''} required>
                             </div>
                         </div>
                         
@@ -727,8 +791,14 @@
             
             if (!codigo || codigo.trim() === '') {
                 if (statusDiv) statusDiv.innerHTML = '';
-                if (descricaoInput) descricaoInput.value = '';
-                if (undInput) undInput.value = '';
+                if (descricaoInput) {
+                    descricaoInput.value = '';
+                    descricaoInput.removeAttribute('readonly');
+                }
+                if (undInput) {
+                    undInput.value = '';
+                    undInput.removeAttribute('readonly');
+                }
                 if (bobinasManuais[index]) {
                     bobinasManuais[index].codigo = '';
                     bobinasManuais[index].descricao = '';
@@ -742,9 +812,12 @@
             if (dados) {
                 if (descricaoInput) {
                     descricaoInput.value = dados.descricao;
+                    descricaoInput.setAttribute('readonly', 'readonly');
+                    descricaoInput.classList.add('input-descricao');
                 }
                 if (undInput) {
                     undInput.value = dados.und;
+                    undInput.setAttribute('readonly', 'readonly');
                 }
                 
                 if (bobinasManuais[index]) {
@@ -763,9 +836,11 @@
             } else {
                 if (descricaoInput) {
                     descricaoInput.value = '';
+                    descricaoInput.removeAttribute('readonly');
                 }
                 if (undInput) {
                     undInput.value = '';
+                    undInput.removeAttribute('readonly');
                 }
                 
                 if (bobinasManuais[index]) {
@@ -974,8 +1049,14 @@
             
             if (!codigo || codigo.trim() === '') {
                 if (statusDiv) statusDiv.innerHTML = '';
-                if (descricaoInput) descricaoInput.value = '';
-                if (undInput) undInput.value = '';
+                if (descricaoInput) {
+                    descricaoInput.value = '';
+                    descricaoInput.removeAttribute('readonly');
+                }
+                if (undInput) {
+                    undInput.value = '';
+                    undInput.removeAttribute('readonly');
+                }
                 if (materiaisManuais[index]) {
                     materiaisManuais[index].codigo = '';
                     materiaisManuais[index].descricao = '';
@@ -989,9 +1070,12 @@
             if (dados) {
                 if (descricaoInput) {
                     descricaoInput.value = dados.descricao;
+                    descricaoInput.setAttribute('readonly', 'readonly');
+                    descricaoInput.classList.add('input-descricao');
                 }
                 if (undInput) {
                     undInput.value = dados.und;
+                    undInput.setAttribute('readonly', 'readonly');
                 }
                 
                 if (materiaisManuais[index]) {
@@ -1010,9 +1094,11 @@
             } else {
                 if (descricaoInput) {
                     descricaoInput.value = '';
+                    descricaoInput.removeAttribute('readonly');
                 }
                 if (undInput) {
                     undInput.value = '';
+                    undInput.removeAttribute('readonly');
                 }
                 
                 if (materiaisManuais[index]) {
@@ -1038,7 +1124,8 @@
             return material || null;
         }
         
-        // Carregar materiais ao iniciar
+        // Carregar dados ao iniciar
+        carregarDadosUsuario();
         carregarMateriais();
         
         // ============================================
@@ -1065,13 +1152,22 @@
         popupOverlay.addEventListener('click', fecharDescricaoPopup);
         
         document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('input-descricao')) {
+            if (e.target.classList.contains('input-descricao') && e.target.readOnly) {
                 const descricao = e.target.value;
                 if (descricao && descricao.trim() !== '') {
                     mostrarDescricaoPopup(e.target, descricao);
                 }
             }
         });
+
+        document.addEventListener('focus', function(e) {
+            if (e.target.classList.contains('input-descricao') && e.target.readOnly) {
+                const descricao = e.target.value;
+                if (descricao && descricao.trim() !== '') {
+                    mostrarDescricaoPopup(e.target, descricao);
+                }
+            }
+        }, true);
         
         // ============================================
         // ENVIAR FORMULÁRIO
