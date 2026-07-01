@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - SICGM</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Estilos adicionais para a página home */
+        .home-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .home-header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .home-header h1 {
+            color: #2D3748;
+            font-size: 24px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #4A5568;
+        }
+
+        .user-matricula {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .btn-sair {
+            background: #FC8181;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-sair:hover {
+            background: #F56565;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+        }
+
+        .welcome-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .welcome-card h2 {
+            color: #2D3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .welcome-card p {
+            color: #718096;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .grid-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+        }
+
+        .menu-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .menu-card .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .menu-card h3 {
+            color: #2D3748;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .menu-card p {
+            color: #718096;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 15px;
+            color: #4A5568;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Validando acesso...</div>
+    </div>
+
+    <div class="home-container" id="homeContent" style="display: none;">
+        <div class="home-header">
+            <h1>🏢 SICGM - Sistema de Gestão</h1>
+            <div class="user-info">
+                <div>
+                    <div class="user-name" id="nomeUsuario">Carregando...</div>
+                    <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
+                </div>
+                <button class="btn-sair" onclick="sair()">🚪 Sair</button>
+            </div>
+        </div>
+
+        <div class="welcome-card">
+            <h2 id="mensagemBoasVindas">Bem-vindo ao SICGM!</h2>
+            <p>Sistema integrado para gestão de contagem de materiais e controle de MGM.</p>
+        </div>
+
+        <div class="grid-menu">
+            <div class="menu-card" onclick="window.location.href='contagem-diaria/index.html'">
+                <div class="icon">📊</div>
+                <h3>Contagem Diária</h3>
+                <p>Registre e visualize as contagens diárias de materiais</p>
+            </div>
+            <div class="menu-card" onclick="window.location.href='mgm-list/index.html'">
+                <div class="icon">📋</div>
+                <h3>Lista MGM</h3>
+                <p>Gerencie a lista de materiais MGM</p>
+            </div>
+            <div class="menu-card" onclick="alert('📊 Funcionalidade em desenvolvimento')">
+                <div class="icon">📈</div>
+                <h3>Relatórios</h3>
+                <p>Visualize relatórios e análises do sistema</p>
+            </div>
+            <div class="menu-card" onclick="alert('⚙️ Funcionalidade em desenvolvimento')">
+                <div class="icon">⚙️</div>
+                <h3>Configurações</h3>
+                <p>Configure as preferências do sistema</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        // ============================================
+        // VALIDAÇÃO OBRIGATÓRIA DE ACESSO
+        // ============================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar loading
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const homeContent = document.getElementById('homeContent');
+            
+            loadingOverlay.classList.add('active');
+
+            // VALIDAÇÃO OBRIGATÓRIA - Verificar sessão
+            const sessao = verificarSessao();
+            
+            if (!sessao) {
+                console.log('🔒 Sessão inválida - Redirecionando para login');
+                // Redirecionar imediatamente para o login
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Se chegou aqui, a sessão é válida
+            console.log('✅ Sessão válida para:', sessao.nome);
+            
+            // Carregar dados do usuário
+            try {
+                document.getElementById('nomeUsuario').textContent = sessao.nome;
+                document.getElementById('matriculaUsuario').textContent = `Matrícula: ${sessao.matricula}`;
+                document.getElementById('mensagemBoasVindas').textContent = 
+                    `👋 Olá, ${sessao.nome}! Seja bem-vindo ao sistema.`;
+            } catch (e) {
+                console.error('Erro ao carregar dados do usuário:', e);
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Esconder loading e mostrar conteúdo
+            setTimeout(() => {
+                loadingOverlay.classList.remove('active');
+                homeContent.style.display = 'block';
+            }, 500);
+
+            // Atualizar timestamp da sessão a cada ação (opcional)
+            atualizarTimestampSessao();
+        });
+
+        // Função para atualizar o timestamp da sessão
+        function atualizarTimestampSessao() {
+            const sessao = sessionStorage.getItem('sessaoSICGM');
+            if (sessao) {
+                try {
+                    const dados = JSON.parse(sessao);
+                    dados.timestamp = Date.now();
+                    sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
+                } catch (e) {
+                    // Ignora erro
+                }
+            }
+        }
+
+        // Atualizar timestamp quando o usuário interagir
+        document.addEventListener('click', function() {
+            atualizarTimestampSessao();
+        });
+
+        document.addEventListener('keydown', function() {
+            atualizarTimestampSessao();
+        });
+
+        // Verificar sessão periodicamente (a cada 5 minutos)
+        setInterval(function() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                console.log('🔒 Sessão expirada - Redirecionando para login');
+                window.location.href = 'index.html';
+            }
+        }, 5 * 60 * 1000); // 5 minutos
+    </script>
+</body>
+</html>

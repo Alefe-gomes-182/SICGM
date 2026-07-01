@@ -31,10 +31,12 @@ async function carregarColaboradores() {
                 // Divide por TAB (\t)
                 const partes = linha.split('\t');
                 
-                if (partes.length >= 3) {
+                // Verificar se tem pelo menos 4 partes (incluindo o perfil)
+                if (partes.length >= 4) {
                     const matricula = partes[0].trim();
                     const nome = partes[1].trim();
                     const cpf = partes[2].trim();
+                    const perfil = partes[3].trim().toUpperCase();
                     
                     // A senha são os 4 primeiros dígitos do CPF
                     const senha = cpf.substring(0, 4);
@@ -43,7 +45,22 @@ async function carregarColaboradores() {
                         matricula: matricula,
                         nome: nome,
                         cpf: cpf,
-                        senha: senha
+                        senha: senha,
+                        perfil: perfil // OPERACIONAL, GESTAO ou VISUALIZACAO
+                    };
+                } else if (partes.length >= 3) {
+                    // Compatibilidade com versões antigas (sem perfil)
+                    const matricula = partes[0].trim();
+                    const nome = partes[1].trim();
+                    const cpf = partes[2].trim();
+                    const senha = cpf.substring(0, 4);
+                    
+                    return {
+                        matricula: matricula,
+                        nome: nome,
+                        cpf: cpf,
+                        senha: senha,
+                        perfil: 'OPERACIONAL' // Perfil padrão para compatibilidade
                     };
                 }
                 return null;
@@ -51,6 +68,7 @@ async function carregarColaboradores() {
             .filter(colaborador => colaborador !== null); // Remove linhas inválidas
         
         console.log('✅ Colaboradores carregados:', databaseColaboradores.length);
+        console.log('📊 Perfis:', databaseColaboradores.map(c => `${c.nome}: ${c.perfil}`));
         return databaseColaboradores;
         
     } catch (error) {
@@ -58,11 +76,11 @@ async function carregarColaboradores() {
         
         // Dados de fallback (para testes)
         databaseColaboradores = [
-            { matricula: "000172", nome: "DAMIAO BATISTA", cpf: "53192958472", senha: "5319" },
-            { matricula: "016718", nome: "RICARDO VALERIO LINS DE ALBUQUERQUE", cpf: "63936003491", senha: "6393" },
-            { matricula: "122904", nome: "BRUNO MOREIRA DA SILVA", cpf: "07915412159", senha: "0791" },
-            { matricula: "170342", nome: "VALMIR SEVERINO DE LIMA SANTOS", cpf: "08796594403", senha: "0879" },
-            { matricula: "170419", nome: "ARLINDO RODRIGUES DE ARAUJO", cpf: "09949433428", senha: "0994" }
+            { matricula: "000172", nome: "DAMIAO BATISTA", cpf: "53192958472", senha: "5319", perfil: "OPERACIONAL" },
+            { matricula: "016718", nome: "RICARDO VALERIO LINS DE ALBUQUERQUE", cpf: "63936003491", senha: "6393", perfil: "OPERACIONAL" },
+            { matricula: "122904", nome: "BRUNO MOREIRA DA SILVA", cpf: "07915412159", senha: "0791", perfil: "OPERACIONAL" },
+            { matricula: "170342", nome: "VALMIR SEVERINO DE LIMA SANTOS", cpf: "08796594403", senha: "0879", perfil: "OPERACIONAL" },
+            { matricula: "170419", nome: "ARLINDO RODRIGUES DE ARAUJO", cpf: "09949433428", senha: "0994", perfil: "OPERACIONAL" }
         ];
         
         console.log('⚠️ Usando dados de fallback para testes');
@@ -89,6 +107,7 @@ function criarSessao(usuario) {
         matricula: usuario.matricula,
         nome: usuario.nome,
         cpf: usuario.cpf,
+        perfil: usuario.perfil || 'OPERACIONAL',
         timestamp: Date.now()
     };
     sessionStorage.setItem('sessaoSICGM', JSON.stringify(sessao));
@@ -117,6 +136,28 @@ function verificarSessao() {
 function logout() {
     sessionStorage.removeItem('sessaoSICGM');
     window.location.href = 'index.html';
+}
+
+// ============================================
+// FUNÇÃO PARA REDIRECIONAR SEGUNDO PERFIL
+// ============================================
+
+function redirecionarPorPerfil(perfil) {
+    // Mapeamento de perfil para página home
+    const homeMap = {
+        'OPERACIONAL': 'home - operacional.html',
+        'GESTAO': 'home - gestao.html',
+        'VISUALIZACAO': 'home - visualizacao.html'
+    };
+    
+    // Normalizar perfil (maiúsculo e sem espaços)
+    const perfilNormalizado = perfil.toUpperCase().trim();
+    const homePage = homeMap[perfilNormalizado] || 'home.html';
+    
+    console.log(`🔀 Redirecionando para: ${homePage} (Perfil: ${perfilNormalizado})`);
+    
+    // Redirecionar para a página correta
+    window.location.href = homePage;
 }
 
 // ============================================
@@ -173,11 +214,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 mensagemErro.className = 'mensagem-sucesso';
                 
                 console.log('✅ Usuário logado:', usuario.nome);
+                console.log('📝 Perfil:', usuario.perfil);
                 console.log('📝 Sessão criada com sucesso');
                 
-                // Redirecionar para a home
+                // Redirecionar para a home baseado no perfil
                 setTimeout(() => {
-                    window.location.href = 'home.html';
+                    redirecionarPorPerfil(usuario.perfil);
                 }, 800);
             } else {
                 // Login falhou
@@ -208,6 +250,7 @@ window.sair = function() {
 
 window.verificarSessao = verificarSessao;
 window.logout = logout;
+window.redirecionarPorPerfil = redirecionarPorPerfil;
 
 // ============================================
 // FUNÇÕES PARA PÁGINA DE CONTAGEM DIÁRIA
