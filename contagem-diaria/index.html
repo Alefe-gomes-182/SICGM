@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SITA - Contagem Diária</title>
+    <title>SICGM - Contagem Diária</title>
     <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body>
@@ -100,13 +100,15 @@
                 nome: 'Bobinas',
                 icone: '🧵',
                 tipo: 'manual',
-                codigos: []
+                codigos: [],
+                validacao: 'cabo' // Palavra obrigatória na descrição
             },
             'trafos': {
                 nome: 'Trafos',
                 icone: '⚡',
                 tipo: 'manual',
-                codigos: []
+                codigos: [],
+                validacao: 'transf' // Palavra obrigatória na descrição
             }
         };
         
@@ -125,29 +127,24 @@
         
         function carregarDadosUsuarioSessao() {
             try {
-                // Tentar carregar da sessão
                 const sessao = sessionStorage.getItem('sessaoSICGM');
                 
                 if (sessao) {
                     const dadosSessao = JSON.parse(sessao);
                     
-                    // Verificar se a sessão é válida (menos de 30 minutos)
                     const tempoDecorrido = Date.now() - dadosSessao.timestamp;
                     if (tempoDecorrido > 30 * 60 * 1000) {
-                        // Sessão expirada
                         console.warn('⏰ Sessão expirada, redirecionando para login...');
                         window.location.href = '../index.html';
                         return false;
                     }
                     
-                    // Preencher campos com dados da sessão
                     document.getElementById('nome').value = dadosSessao.nome || '';
                     document.getElementById('matricula').value = dadosSessao.matricula || '';
                     
                     console.log('✅ Dados do usuário carregados da sessão:', dadosSessao.nome);
                     return true;
                 } else {
-                    // Se não tiver sessão, tentar carregar do arquivo colaboradores.txt
                     console.warn('⚠️ Sessão não encontrada, tentando carregar do arquivo...');
                     return carregarColaboradoresArquivo();
                 }
@@ -169,13 +166,11 @@
                 const texto = await response.text();
                 const linhas = texto.trim().split('\n');
                 
-                // Procurar pelo usuário marcado como ativo (* no início da linha)
                 let usuarioEncontrado = null;
                 
                 for (let i = 0; i < linhas.length; i++) {
                     const linha = linhas[i].trim();
                     if (linha) {
-                        // Verificar se tem marcador de ativo
                         if (linha.startsWith('*')) {
                             const partes = linha.replace('*', '').trim().split('\t');
                             if (partes.length >= 2) {
@@ -189,7 +184,6 @@
                     }
                 }
                 
-                // Se não encontrou marcador, pega o primeiro
                 if (!usuarioEncontrado && linhas.length > 0) {
                     const primeiraLinha = linhas[0].trim().replace('*', '').trim();
                     const partes = primeiraLinha.split('\t');
@@ -207,7 +201,6 @@
                     console.log('✅ Dados do usuário carregados do arquivo:', usuarioEncontrado.nome);
                     return true;
                 } else {
-                    // Se ainda não encontrou, permitir edição manual
                     document.getElementById('nome').removeAttribute('readonly');
                     document.getElementById('matricula').removeAttribute('readonly');
                     console.warn('⚠️ Nenhum colaborador encontrado. Campos liberados para edição.');
@@ -216,7 +209,6 @@
                 
             } catch (error) {
                 console.error('❌ Erro ao carregar colaboradores:', error);
-                // Permitir edição manual em caso de erro
                 document.getElementById('nome').removeAttribute('readonly');
                 document.getElementById('matricula').removeAttribute('readonly');
                 return false;
@@ -234,6 +226,48 @@
         let categoriaAtiva = null;
         let codigosExistentesDB = new Set();
         let cacheQuantidades = {};
+        
+        // ============================================
+        // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA
+        // ============================================
+        
+        function validarCodigoPorCategoria(codigo, categoria) {
+            const dados = buscarDadosCodigo(codigo);
+            
+            if (!dados) {
+                return {
+                    valido: false,
+                    motivo: 'Código não encontrado na base de dados'
+                };
+            }
+            
+            const descricao = dados.descricao.toLowerCase();
+            const categoriaConfig = CATEGORIAS[categoria];
+            
+            if (!categoriaConfig || !categoriaConfig.validacao) {
+                return { valido: true };
+            }
+            
+            const palavraChave = categoriaConfig.validacao.toLowerCase();
+            
+            if (categoria === 'bobinas') {
+                if (!descricao.startsWith(palavraChave)) {
+                    return {
+                        valido: false,
+                        motivo: `A descrição deve começar com "${palavraChave}" para esta categoria`
+                    };
+                }
+            } else if (categoria === 'trafos') {
+                if (!descricao.includes(palavraChave)) {
+                    return {
+                        valido: false,
+                        motivo: `A descrição deve conter "${palavraChave}" para esta categoria`
+                    };
+                }
+            }
+            
+            return { valido: true };
+        }
         
         // ============================================
         // CARREGAR MATERIAIS DO ARQUIVO
@@ -828,7 +862,7 @@
         }
         
         // ============================================
-        // VALIDAR CÓDIGO DA BOBINA
+        // VALIDAR CÓDIGO DA BOBINA (COM VALIDAÇÃO DE DESCRIÇÃO)
         // ============================================
 
         function validarCodigoBobina(index, codigo) {
@@ -854,6 +888,31 @@
                 return;
             }
             
+            // Validar código com a regra da categoria
+            const validacao = validarCodigoPorCategoria(codigo.trim(), 'bobinas');
+            
+            if (!validacao.valido) {
+                if (statusDiv) {
+                    statusDiv.innerHTML = '❌ ' + validacao.motivo;
+                    statusDiv.className = 'codigo-status codigo-erro';
+                }
+                if (descricaoInput) {
+                    descricaoInput.value = '';
+                    descricaoInput.removeAttribute('readonly');
+                }
+                if (undInput) {
+                    undInput.value = '';
+                    undInput.removeAttribute('readonly');
+                }
+                if (bobinasManuais[index]) {
+                    bobinasManuais[index].codigo = '';
+                    bobinasManuais[index].descricao = '';
+                    bobinasManuais[index].und = '';
+                }
+                mostrarMensagem('❌ ' + validacao.motivo, 'erro');
+                return;
+            }
+            
             const dados = buscarDadosCodigo(codigo.trim());
             
             if (dados) {
@@ -874,7 +933,7 @@
                 }
                 
                 if (statusDiv) {
-                    statusDiv.innerHTML = '✅ Código encontrado';
+                    statusDiv.innerHTML = '✅ Código válido para bobina';
                     statusDiv.className = 'codigo-status codigo-ok';
                 }
                 
@@ -1086,7 +1145,7 @@
         }
         
         // ============================================
-        // VALIDAR CÓDIGO DO TRAFO
+        // VALIDAR CÓDIGO DO TRAFO (COM VALIDAÇÃO DE DESCRIÇÃO)
         // ============================================
 
         function validarCodigoTrafo(index, codigo) {
@@ -1112,6 +1171,31 @@
                 return;
             }
             
+            // Validar código com a regra da categoria
+            const validacao = validarCodigoPorCategoria(codigo.trim(), 'trafos');
+            
+            if (!validacao.valido) {
+                if (statusDiv) {
+                    statusDiv.innerHTML = '❌ ' + validacao.motivo;
+                    statusDiv.className = 'codigo-status codigo-erro';
+                }
+                if (descricaoInput) {
+                    descricaoInput.value = '';
+                    descricaoInput.removeAttribute('readonly');
+                }
+                if (undInput) {
+                    undInput.value = '';
+                    undInput.removeAttribute('readonly');
+                }
+                if (materiaisManuais[index]) {
+                    materiaisManuais[index].codigo = '';
+                    materiaisManuais[index].descricao = '';
+                    materiaisManuais[index].und = '';
+                }
+                mostrarMensagem('❌ ' + validacao.motivo, 'erro');
+                return;
+            }
+            
             const dados = buscarDadosCodigo(codigo.trim());
             
             if (dados) {
@@ -1132,7 +1216,7 @@
                 }
                 
                 if (statusDiv) {
-                    statusDiv.innerHTML = '✅ Código encontrado';
+                    statusDiv.innerHTML = '✅ Código válido para trafo';
                     statusDiv.className = 'codigo-status codigo-ok';
                 }
                 
@@ -1175,7 +1259,6 @@
         // INICIALIZAR
         // ============================================
         
-        // Primeiro carregar dados do usuário, depois os materiais
         const usuarioCarregado = carregarDadosUsuarioSessao();
         carregarMateriais();
         
@@ -1296,6 +1379,20 @@
                         const descricaoTrafo = document.getElementById(`trafo-descricao-${index}`)?.value || '';
                         const undTrafo = document.getElementById(`trafo-und-${index}`)?.value || '';
                         
+                        // Validar novamente antes de enviar
+                        const validacao = validarCodigoPorCategoria(codigoTrafo, 'trafos');
+                        if (!validacao.valido) {
+                            mostrarMensagem('❌ Trafo #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
+                            const codigoInput = document.getElementById(`trafo-codigo-${index}`);
+                            if (codigoInput) {
+                                codigoInput.classList.add('input-error');
+                                codigoInput.focus();
+                                setTimeout(() => codigoInput.classList.remove('input-error'), 3000);
+                            }
+                            temErroValidacao = true;
+                            return;
+                        }
+                        
                         const dadosCodigo = buscarDadosCodigo(codigoTrafo);
                         if (!dadosCodigo) {
                             mostrarMensagem('❌ O código "' + codigoTrafo + '" do Trafo #' + (parseInt(index) + 1) + ' não foi encontrado na base de dados!', 'erro');
@@ -1314,7 +1411,6 @@
                         const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
                         const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
                         
-                        // A quantidade é subtraída quando dar baixa está marcado
                         const qtdFinal = darBaixa ? -(Math.abs(qtd)) : qtd;
                         
                         if (materiaisManuais[index]) {
@@ -1352,6 +1448,20 @@
                         const undBobina = document.getElementById(`bobina-und-${index}`)?.value || '';
                         const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
                         
+                        // Validar novamente antes de enviar
+                        const validacao = validarCodigoPorCategoria(codigoBobina, 'bobinas');
+                        if (!validacao.valido) {
+                            mostrarMensagem('❌ Bobina #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
+                            const codigoInput = document.getElementById(`bobina-codigo-${index}`);
+                            if (codigoInput) {
+                                codigoInput.classList.add('input-error');
+                                codigoInput.focus();
+                                setTimeout(() => codigoInput.classList.remove('input-error'), 3000);
+                            }
+                            temErroValidacao = true;
+                            return;
+                        }
+                        
                         const dadosCodigo = buscarDadosCodigo(codigoBobina);
                         if (!dadosCodigo) {
                             mostrarMensagem('❌ O código "' + codigoBobina + '" da Bobina #' + (parseInt(index) + 1) + ' não foi encontrado na base de dados!', 'erro');
@@ -1365,7 +1475,6 @@
                             return;
                         }
                         
-                        // A quantidade é subtraída quando dar baixa está marcado
                         const qtdFinal = darBaixa ? -(Math.abs(qtd)) : qtd;
                         
                         if (bobinasManuais[index]) {
@@ -1496,7 +1605,6 @@
             const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
             if (!inputAnterior || !codigo) return;
             
-            // Verificar cache primeiro
             if (cacheQuantidades[codigo]) {
                 const dados = cacheQuantidades[codigo];
                 inputAnterior.value = dados.qtd || '0';
@@ -1514,7 +1622,6 @@
                 
                 const resultado = await response.json();
                 
-                // Salvar no cache
                 cacheQuantidades[codigo] = {
                     qtd: resultado.encontrado ? resultado.qtd_anterior : '0',
                     data: resultado.encontrado ? resultado.data_anterior : null
