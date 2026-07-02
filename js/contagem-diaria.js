@@ -309,14 +309,35 @@ if (document.getElementById('contagemForm')) {
             const trafosMap = new Map();
             const bobinasMap = new Map();
             
+            // Buscar as últimas quantidades para cada código
+            const ultimasQuantidades = {};
+            for (const item of resultados) {
+                if (item.ativo === 1 || item.ativo === undefined) {
+                    // Se já temos uma quantidade para este código, comparar datas
+                    if (!ultimasQuantidades[item.codigo] || 
+                        new Date(item.data) > new Date(ultimasQuantidades[item.codigo].data)) {
+                        ultimasQuantidades[item.codigo] = {
+                            qtd: item.qtd,
+                            data: item.data,
+                            tombamento: item.tombamento
+                        };
+                    }
+                }
+            }
+            
             resultados.forEach(item => {
                 const isAtivo = item.ativo === undefined || item.ativo === 1 || item.ativo === true;
                 const tipoMaterial = item.tipo_material || '';
                 
+                // Determinar a última quantidade para este código
+                const ultimaQtd = ultimasQuantidades[item.codigo];
+                const qtdSalva = ultimaQtd ? ultimaQtd.qtd : '';
+                
                 if (tipoMaterial === 'bobina' && isAtivo) {
                     codigosExistentesDB.add(item.codigo);
-                    if (!bobinasMap.has(item.codigo + item.tombamento)) {
-                        bobinasMap.set(item.codigo + item.tombamento, {
+                    const key = item.codigo + (item.tombamento || '');
+                    if (!bobinasMap.has(key)) {
+                        bobinasMap.set(key, {
                             codigo: item.codigo,
                             descricao: item.descricao || '',
                             und: item.und || '',
@@ -327,15 +348,16 @@ if (document.getElementById('contagemForm')) {
                             numero_serie: null,
                             oleo: null,
                             cor: null,
-                            _qtd: '',
+                            _qtd: qtdSalva,  // <-- RESTAURAR QTD SALVA
                             _justificativa: ''
                         });
                     }
                 } 
                 else if (tipoMaterial === 'trafo' && isAtivo) {
                     codigosExistentesDB.add(item.codigo);
-                    if (!trafosMap.has(item.codigo + item.tombamento)) {
-                        trafosMap.set(item.codigo + item.tombamento, {
+                    const key = item.codigo + (item.tombamento || '');
+                    if (!trafosMap.has(key)) {
+                        trafosMap.set(key, {
                             codigo: item.codigo,
                             descricao: item.descricao || '',
                             und: item.und || '',
@@ -346,20 +368,21 @@ if (document.getElementById('contagemForm')) {
                             ativo: true,
                             tipo_material: 'trafo',
                             id: item.id,
-                            _qtd: '',
+                            _qtd: qtdSalva,  // <-- RESTAURAR QTD SALVA
                             _justificativa: ''
                         });
                     }
                 }
-                // Fallback para dados antigos SEM tipo_material
+                // Fallback para dados antigos
                 else if (isAtivo) {
                     const isBobina = item.descricao && item.descricao.toUpperCase().startsWith('CABO');
                     const isTrafo = item.numero_serie || item.oleo || item.cor;
                     
                     if (isBobina && !isTrafo) {
                         codigosExistentesDB.add(item.codigo);
-                        if (!bobinasMap.has(item.codigo + item.tombamento)) {
-                            bobinasMap.set(item.codigo + item.tombamento, {
+                        const key = item.codigo + (item.tombamento || '');
+                        if (!bobinasMap.has(key)) {
+                            bobinasMap.set(key, {
                                 codigo: item.codigo,
                                 descricao: item.descricao || '',
                                 und: item.und || '',
@@ -370,14 +393,15 @@ if (document.getElementById('contagemForm')) {
                                 numero_serie: null,
                                 oleo: null,
                                 cor: null,
-                                _qtd: '',
+                                _qtd: qtdSalva,  // <-- RESTAURAR QTD SALVA
                                 _justificativa: ''
                             });
                         }
                     } else if (isTrafo && !isBobina) {
                         codigosExistentesDB.add(item.codigo);
-                        if (!trafosMap.has(item.codigo + item.tombamento)) {
-                            trafosMap.set(item.codigo + item.tombamento, {
+                        const key = item.codigo + (item.tombamento || '');
+                        if (!trafosMap.has(key)) {
+                            trafosMap.set(key, {
                                 codigo: item.codigo,
                                 descricao: item.descricao || '',
                                 und: item.und || '',
@@ -388,7 +412,7 @@ if (document.getElementById('contagemForm')) {
                                 ativo: true,
                                 tipo_material: 'trafo',
                                 id: item.id,
-                                _qtd: '',
+                                _qtd: qtdSalva,  // <-- RESTAURAR QTD SALVA
                                 _justificativa: ''
                             });
                         }
@@ -928,14 +952,14 @@ if (document.getElementById('contagemForm')) {
             const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
             const und = document.getElementById(`bobina-und-${index}`)?.value || '';
             const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
-            const qtd = document.getElementById(`qtd-bobinas-${index}`)?.value || '';
-            const justificativa = document.getElementById(`justificativa-bobinas-${index}`)?.value || '';
+            const qtd = document.getElementById(`qtd-${index}`)?.value || '';
+            const justificativa = document.getElementById(`justificativa-${index}`)?.value || '';
             
             bobinasManuais[index].codigo = codigo;
             bobinasManuais[index].descricao = descricao;
             bobinasManuais[index].und = und;
             bobinasManuais[index].tombamento = tombamento;
-            bobinasManuais[index]._qtd = qtd;
+            bobinasManuais[index]._qtd = qtd;  // <-- SALVAR QTD
             bobinasManuais[index]._justificativa = justificativa;
             bobinasManuais[index].tipo_material = 'bobina';
             bobinasManuais[index].id = item.dataset.id || null;
@@ -962,8 +986,8 @@ if (document.getElementById('contagemForm')) {
             const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
             const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
             const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
-            const qtd = document.getElementById(`qtd-trafos-${index}`)?.value || '';
-            const justificativa = document.getElementById(`justificativa-trafos-${index}`)?.value || '';
+            const qtd = document.getElementById(`qtd-${index}`)?.value || '';
+            const justificativa = document.getElementById(`justificativa-${index}`)?.value || '';
             
             materiaisManuais[index].codigo = codigo;
             materiaisManuais[index].descricao = descricao;
@@ -972,7 +996,7 @@ if (document.getElementById('contagemForm')) {
             materiaisManuais[index].tombamento = tombamento;
             materiaisManuais[index].oleo = oleo;
             materiaisManuais[index].cor = cor;
-            materiaisManuais[index]._qtd = qtd;
+            materiaisManuais[index]._qtd = qtd;  // <-- SALVAR QTD
             materiaisManuais[index]._justificativa = justificativa;
             materiaisManuais[index].tipo_material = 'trafo';
             materiaisManuais[index].id = item.dataset.id || null;
