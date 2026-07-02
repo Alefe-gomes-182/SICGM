@@ -296,6 +296,8 @@ if (document.getElementById('contagemForm')) {
                 // USAR O CAMPO tipo_material PARA CLASSIFICAR
                 const tipoMaterial = item.tipo_material || '';
                 
+                console.log(`📌 Item: ${item.codigo} - tipo: ${tipoMaterial} - ativo: ${isAtivo}`);
+                
                 if (tipoMaterial === 'bobina' && isAtivo) {
                     // É uma bobina
                     codigosExistentesDB.add(item.codigo);
@@ -850,7 +852,8 @@ if (document.getElementById('contagemForm')) {
             tipo_material: 'bobina',
             numero_serie: null,
             oleo: null,
-            cor: null
+            cor: null,
+            bobina: true
         };
         
         bobinasManuais.push(novaBobina);
@@ -915,6 +918,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index]._qtd = qtd;
                 bobinasManuais[index]._justificativa = justificativa;
                 bobinasManuais[index].tipo_material = 'bobina';
+                bobinasManuais[index].bobina = true;
             }
         });
     }
@@ -948,6 +952,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index]._qtd = qtd;
                 materiaisManuais[index]._justificativa = justificativa;
                 materiaisManuais[index].tipo_material = 'trafo';
+                materiaisManuais[index].bobina = false;
             }
         });
     }
@@ -1046,6 +1051,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].descricao = dados.descricao;
                 bobinasManuais[index].und = dados.und;
                 bobinasManuais[index].tipo_material = 'bobina';
+                bobinasManuais[index].bobina = true;
             }
             
             if (statusDiv) {
@@ -1070,6 +1076,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].descricao = '';
                 bobinasManuais[index].und = '';
                 bobinasManuais[index].tipo_material = 'bobina';
+                bobinasManuais[index].bobina = true;
             }
             
             if (statusDiv) {
@@ -1222,7 +1229,8 @@ if (document.getElementById('contagemForm')) {
             isNew: true,
             _qtd: '',
             _justificativa: '',
-            tipo_material: 'trafo'
+            tipo_material: 'trafo',
+            bobina: false
         };
         
         materiaisManuais.push(novoTrafo);
@@ -1363,6 +1371,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].descricao = dados.descricao;
                 materiaisManuais[index].und = dados.und;
                 materiaisManuais[index].tipo_material = 'trafo';
+                materiaisManuais[index].bobina = false;
             }
             
             if (statusDiv) {
@@ -1387,6 +1396,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].descricao = '';
                 materiaisManuais[index].und = '';
                 materiaisManuais[index].tipo_material = 'trafo';
+                materiaisManuais[index].bobina = false;
             }
             
             if (statusDiv) {
@@ -1455,7 +1465,7 @@ if (document.getElementById('contagemForm')) {
     }, true);
     
     // ============================================
-    // ENVIAR FORMULÁRIO
+    // ENVIAR FORMULÁRIO (CORRIGIDO COM tipo_material)
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
@@ -1577,23 +1587,30 @@ if (document.getElementById('contagemForm')) {
                         materiaisManuais[index].cor = cor;
                         materiaisManuais[index].ativo = !darBaixa;
                         materiaisManuais[index].tipo_material = 'trafo';
+                        materiaisManuais[index].bobina = false;
                     }
                     
-                    materiaisEnviar.push({
-                        nome, matricula, data,
+                    // OBJETO COMPLETO PARA ENVIO
+                    const materialEnvio = {
+                        nome: nome,
+                        matricula: matricula,
+                        data: data,
                         codigo: codigoTrafo,
                         descricao: descricaoTrafo,
                         und: undTrafo,
                         qtd: qtdFinal,
                         numero_serie: serie,
-                        tombamento,
-                        oleo,
-                        cor,
+                        tombamento: tombamento,
+                        oleo: oleo,
+                        cor: cor,
                         obs: justificativa || `Contagem diária - ${nome}`,
                         ativo: darBaixa ? 0 : 1,
                         tipo_material: 'trafo',
                         bobina: false
-                    });
+                    };
+                    
+                    console.log('📤 Enviando TRAFO:', materialEnvio);
+                    materiaisEnviar.push(materialEnvio);
                     
                 } else if (categoria === 'bobinas') {
                     const index = materialItem.dataset.index;
@@ -1640,35 +1657,44 @@ if (document.getElementById('contagemForm')) {
                         bobinasManuais[index].tombamento = tombamento;
                         bobinasManuais[index].ativo = !darBaixa;
                         bobinasManuais[index].tipo_material = 'bobina';
+                        bobinasManuais[index].bobina = true;
                     }
                     
-                    materiaisEnviar.push({
-                        nome, matricula, data,
+                    // OBJETO COMPLETO PARA ENVIO
+                    const materialEnvio = {
+                        nome: nome,
+                        matricula: matricula,
+                        data: data,
                         codigo: codigoBobina,
                         descricao: descricaoBobina,
                         und: undBobina,
                         qtd: qtdFinal,
                         numero_serie: null,
-                        tombamento,
+                        tombamento: tombamento,
                         oleo: null,
                         cor: null,
                         obs: justificativa || `Contagem diária - ${nome}`,
                         ativo: darBaixa ? 0 : 1,
                         tipo_material: 'bobina',
                         bobina: true
-                    });
+                    };
+                    
+                    console.log('📤 Enviando BOBINA:', materialEnvio);
+                    materiaisEnviar.push(materialEnvio);
                     
                 } else {
                     const materiaisDaCategoria = materiaisPorCategoria[categoria] || [];
                     const material = materiaisDaCategoria.find(m => m.codigo === codigo);
                     
                     if (material) {
-                        materiaisEnviar.push({
-                            nome, matricula, data,
+                        const materialEnvio = {
+                            nome: nome,
+                            matricula: matricula,
+                            data: data,
                             codigo: material.codigo,
                             descricao: material.descricao,
                             und: material.und,
-                            qtd,
+                            qtd: qtd,
                             numero_serie: null,
                             tombamento: null,
                             oleo: null,
@@ -1677,7 +1703,10 @@ if (document.getElementById('contagemForm')) {
                             ativo: 1,
                             tipo_material: 'concreto',
                             bobina: false
-                        });
+                        };
+                        
+                        console.log('📤 Enviando CONCRETO:', materialEnvio);
+                        materiaisEnviar.push(materialEnvio);
                     }
                 }
             }
@@ -1692,6 +1721,9 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
+        console.log('📦 Total de materiais a enviar:', materiaisEnviar.length);
+        console.log('📋 Materiais:', materiaisEnviar);
+        
         try {
             botaoSubmit.disabled = true;
             botaoSubmit.textContent = 'Enviando...';
@@ -1699,6 +1731,8 @@ if (document.getElementById('contagemForm')) {
             
             const resultados = [];
             for (const material of materiaisEnviar) {
+                console.log(`🚀 Enviando para API: ${material.codigo} (${material.tipo_material})`);
+                
                 const response = await fetch(`${API_URL}/api/salvar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1706,6 +1740,8 @@ if (document.getElementById('contagemForm')) {
                 });
                 
                 const resultado = await response.json();
+                console.log(`✅ Resposta para ${material.codigo}:`, resultado);
+                
                 resultados.push({ 
                     codigo: material.codigo, 
                     ok: response.ok, 
@@ -1751,7 +1787,7 @@ if (document.getElementById('contagemForm')) {
             }
             
         } catch (error) {
-            console.error('Erro:', error);
+            console.error('❌ Erro:', error);
             mostrarMensagem('❌ Erro de conexão com o servidor.', 'erro');
             
         } finally {
