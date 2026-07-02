@@ -20,6 +20,7 @@ if (document.getElementById('contagemForm')) {
             nome: 'Concretos',
             icone: '🏗️',
             tipo: 'predefinido',
+            tipo_material: 'concreto',
             codigos: [
                 '90405', '91073', '90662', '90400', '91074',
                 '22817', '37745', '90570', '629476', '91020',
@@ -37,6 +38,7 @@ if (document.getElementById('contagemForm')) {
             nome: 'Bobinas',
             icone: '🧵',
             tipo: 'manual',
+            tipo_material: 'bobina',
             codigos: [],
             validacao: 'cabo'
         },
@@ -44,6 +46,7 @@ if (document.getElementById('contagemForm')) {
             nome: 'Trafos',
             icone: '⚡',
             tipo: 'manual',
+            tipo_material: 'trafo',
             codigos: [],
             validacao: 'transf'
         }
@@ -61,6 +64,7 @@ if (document.getElementById('contagemForm')) {
     let codigosExistentesDB = new Set();
     let cacheQuantidades = {};
     let dadosCarregados = false;
+    let todosRegistrosDB = [];
     
     // ============================================
     // PREENCHER DATA AUTOMATICAMENTE
@@ -95,7 +99,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // Tornar a função global
     window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
@@ -265,6 +268,7 @@ if (document.getElementById('contagemForm')) {
             
             console.log('📦 ' + materiaisBanco.length + ' materiais únicos carregados');
             organizarPorCategoria();
+            await carregarTodosRegistros();
             await carregarItensManuais();
             criarAbas();
             dadosCarregados = true;
@@ -277,7 +281,23 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CARREGAR ITENS MANUAIS DO D1 (USANDO tipo_material)
+    // CARREGAR TODOS OS REGISTROS DO D1
+    // ============================================
+    
+    async function carregarTodosRegistros() {
+        try {
+            const response = await fetch(`${API_URL}/api/dados`);
+            const resultados = await response.json();
+            todosRegistrosDB = resultados;
+            console.log('📊 ' + todosRegistrosDB.length + ' registros carregados do banco');
+        } catch (error) {
+            console.error('Erro ao carregar registros:', error);
+            todosRegistrosDB = [];
+        }
+    }
+    
+    // ============================================
+    // CARREGAR ITENS MANUAIS DO D1
     // ============================================
     
     async function carregarItensManuais() {
@@ -285,30 +305,25 @@ if (document.getElementById('contagemForm')) {
             const response = await fetch(`${API_URL}/api/dados`);
             const resultados = await response.json();
             
-            // Limpar os sets e maps
             codigosExistentesDB = new Set();
             const trafosMap = new Map();
             const bobinasMap = new Map();
             
             resultados.forEach(item => {
                 const isAtivo = item.ativo === undefined || item.ativo === 1 || item.ativo === true;
-                
-                // USAR O CAMPO tipo_material PARA CLASSIFICAR
                 const tipoMaterial = item.tipo_material || '';
                 
-                console.log(`📌 Item: ${item.codigo} - tipo: ${tipoMaterial} - ativo: ${isAtivo}`);
-                
                 if (tipoMaterial === 'bobina' && isAtivo) {
-                    // É uma bobina
                     codigosExistentesDB.add(item.codigo);
-                    if (!bobinasMap.has(item.codigo)) {
-                        bobinasMap.set(item.codigo, {
+                    if (!bobinasMap.has(item.codigo + item.tombamento)) {
+                        bobinasMap.set(item.codigo + item.tombamento, {
                             codigo: item.codigo,
                             descricao: item.descricao || '',
                             und: item.und || '',
                             tombamento: item.tombamento || '',
                             ativo: true,
                             tipo_material: 'bobina',
+                            id: item.id,
                             numero_serie: null,
                             oleo: null,
                             cor: null,
@@ -318,10 +333,9 @@ if (document.getElementById('contagemForm')) {
                     }
                 } 
                 else if (tipoMaterial === 'trafo' && isAtivo) {
-                    // É um trafo
                     codigosExistentesDB.add(item.codigo);
-                    if (!trafosMap.has(item.codigo)) {
-                        trafosMap.set(item.codigo, {
+                    if (!trafosMap.has(item.codigo + item.tombamento)) {
+                        trafosMap.set(item.codigo + item.tombamento, {
                             codigo: item.codigo,
                             descricao: item.descricao || '',
                             und: item.und || '',
@@ -331,6 +345,7 @@ if (document.getElementById('contagemForm')) {
                             cor: item.cor || '',
                             ativo: true,
                             tipo_material: 'trafo',
+                            id: item.id,
                             _qtd: '',
                             _justificativa: ''
                         });
@@ -338,20 +353,20 @@ if (document.getElementById('contagemForm')) {
                 }
                 // Fallback para dados antigos SEM tipo_material
                 else if (isAtivo) {
-                    // Tentar determinar pelo campo bobina
-                    const isBobina = item.bobina === true || item.bobina === 1;
+                    const isBobina = item.descricao && item.descricao.toUpperCase().startsWith('CABO');
                     const isTrafo = item.numero_serie || item.oleo || item.cor;
                     
                     if (isBobina && !isTrafo) {
                         codigosExistentesDB.add(item.codigo);
-                        if (!bobinasMap.has(item.codigo)) {
-                            bobinasMap.set(item.codigo, {
+                        if (!bobinasMap.has(item.codigo + item.tombamento)) {
+                            bobinasMap.set(item.codigo + item.tombamento, {
                                 codigo: item.codigo,
                                 descricao: item.descricao || '',
                                 und: item.und || '',
                                 tombamento: item.tombamento || '',
                                 ativo: true,
                                 tipo_material: 'bobina',
+                                id: item.id,
                                 numero_serie: null,
                                 oleo: null,
                                 cor: null,
@@ -361,8 +376,8 @@ if (document.getElementById('contagemForm')) {
                         }
                     } else if (isTrafo && !isBobina) {
                         codigosExistentesDB.add(item.codigo);
-                        if (!trafosMap.has(item.codigo)) {
-                            trafosMap.set(item.codigo, {
+                        if (!trafosMap.has(item.codigo + item.tombamento)) {
+                            trafosMap.set(item.codigo + item.tombamento, {
                                 codigo: item.codigo,
                                 descricao: item.descricao || '',
                                 und: item.und || '',
@@ -372,6 +387,7 @@ if (document.getElementById('contagemForm')) {
                                 cor: item.cor || '',
                                 ativo: true,
                                 tipo_material: 'trafo',
+                                id: item.id,
                                 _qtd: '',
                                 _justificativa: ''
                             });
@@ -380,11 +396,9 @@ if (document.getElementById('contagemForm')) {
                 }
             });
             
-            // Atualiza os arrays
             materiaisManuais = Array.from(trafosMap.values());
             bobinasManuais = Array.from(bobinasMap.values());
             
-            // Atualiza o objeto de categorias
             materiaisPorCategoria['trafos'] = materiaisManuais;
             materiaisPorCategoria['bobinas'] = bobinasManuais;
             
@@ -501,12 +515,13 @@ if (document.getElementById('contagemForm')) {
         }
         
         let html = '';
+        const tipoMaterial = CATEGORIAS[categoria]?.tipo_material || 'concreto';
         
         materiais.forEach((material, index) => {
             const idUnico = `${categoria}-${index}`;
             
             html += `
-                <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}">
+                <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}">
                     <div class="material-row">
                         <div class="material-field">
                             <label>Código</label>
@@ -552,7 +567,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS (USANDO tipo_material)
+    // RENDERIZAR BOBINAS
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -560,7 +575,6 @@ if (document.getElementById('contagemForm')) {
         
         html += `<div id="bobinas-container">`;
         
-        // Filtra apenas itens que são bobinas (tipo_material === 'bobina')
         const bobinasAtivas = materiais.filter(b => {
             return b.ativo !== false && b.tipo_material === 'bobina';
         });
@@ -577,12 +591,11 @@ if (document.getElementById('contagemForm')) {
             const codigoBobina = material.codigo || '';
             const existeNoBanco = codigoBobina ? codigoExisteNoBanco(codigoBobina) : false;
             const temDescricao = material.descricao && material.descricao.trim() !== '';
-            
-            // Recuperar quantidade salva
             const qtdSalva = material._qtd || '';
+            const idRegistro = material.id || null;
             
             html += `
-                <div class="material-item bobina-item" data-codigo="${codigoBobina}" data-categoria="bobinas" data-index="${index}">
+                <div class="material-item bobina-item" data-codigo="${codigoBobina}" data-categoria="bobinas" data-tipo="bobina" data-id="${idRegistro}" data-tombamento="${material.tombamento || ''}">
                     <div class="material-header">
                         <span class="material-number">Bobina #${index + 1}</span>
                         <div class="trafo-header-actions">
@@ -684,7 +697,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS (USANDO tipo_material)
+    // RENDERIZAR TRAFOS
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -692,7 +705,6 @@ if (document.getElementById('contagemForm')) {
         
         html += `<div id="trafos-container">`;
         
-        // Filtra apenas itens que são trafos (tipo_material === 'trafo')
         const trafosAtivos = materiais.filter(t => {
             return t.ativo !== false && t.tipo_material === 'trafo';
         });
@@ -709,12 +721,11 @@ if (document.getElementById('contagemForm')) {
             const codigoTrafo = material.codigo || '';
             const existeNoBanco = codigoTrafo ? codigoExisteNoBanco(codigoTrafo) : false;
             const temDescricao = material.descricao && material.descricao.trim() !== '';
-            
-            // Recuperar quantidade salva
             const qtdSalva = material._qtd || '';
+            const idRegistro = material.id || null;
             
             html += `
-                <div class="material-item trafo-item" data-codigo="${codigoTrafo}" data-categoria="trafos" data-index="${index}">
+                <div class="material-item trafo-item" data-codigo="${codigoTrafo}" data-categoria="trafos" data-tipo="trafo" data-id="${idRegistro}" data-tombamento="${material.tombamento || ''}">
                     <div class="material-header">
                         <span class="material-number">Trafo #${index + 1}</span>
                         <div class="trafo-header-actions">
@@ -837,7 +848,6 @@ if (document.getElementById('contagemForm')) {
     function adicionarBobina() {
         console.log('🧵 Função adicionarBobina chamada');
         
-        // Salvar os dados atuais das bobinas antes de adicionar
         salvarDadosBobinasAtuais();
         
         const novaBobina = {
@@ -853,28 +863,22 @@ if (document.getElementById('contagemForm')) {
             numero_serie: null,
             oleo: null,
             cor: null,
-            bobina: true
+            id: null
         };
         
         bobinasManuais.push(novaBobina);
         materiaisPorCategoria['bobinas'] = bobinasManuais;
         
-        console.log('📦 Nova bobina adicionada:', novaBobina);
-        console.log('📊 Total de bobinas:', bobinasManuais.length);
-        
-        // Renderizar novamente com todos os dados preservados
         const tabsContent = document.getElementById('tab-bobinas');
         if (tabsContent) {
             tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
             atualizarContadorBobinas();
             
-            // Restaurar quantidades anteriores e diferenças
             setTimeout(() => {
                 bobinasManuais.forEach((material, index) => {
                     if (material.codigo) {
                         buscarQuantidadeAnterior(material.codigo, `bobinas-${index}`);
                     }
-                    // Restaurar diferença se houver quantidade
                     if (material._qtd) {
                         const idUnico = `bobinas-${index}`;
                         calcularDiferencaBobina(idUnico, material.codigo);
@@ -890,8 +894,6 @@ if (document.getElementById('contagemForm')) {
                     setTimeout(() => novoCodigoInput.focus(), 300);
                 }
             }
-        } else {
-            console.error('❌ Elemento tab-bobinas não encontrado!');
         }
     }
     
@@ -918,7 +920,7 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index]._qtd = qtd;
                 bobinasManuais[index]._justificativa = justificativa;
                 bobinasManuais[index].tipo_material = 'bobina';
-                bobinasManuais[index].bobina = true;
+                bobinasManuais[index].id = item.dataset.id || null;
             }
         });
     }
@@ -952,7 +954,7 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index]._qtd = qtd;
                 materiaisManuais[index]._justificativa = justificativa;
                 materiaisManuais[index].tipo_material = 'trafo';
-                materiaisManuais[index].bobina = false;
+                materiaisManuais[index].id = item.dataset.id || null;
             }
         });
     }
@@ -1051,7 +1053,6 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].descricao = dados.descricao;
                 bobinasManuais[index].und = dados.und;
                 bobinasManuais[index].tipo_material = 'bobina';
-                bobinasManuais[index].bobina = true;
             }
             
             if (statusDiv) {
@@ -1076,7 +1077,6 @@ if (document.getElementById('contagemForm')) {
                 bobinasManuais[index].descricao = '';
                 bobinasManuais[index].und = '';
                 bobinasManuais[index].tipo_material = 'bobina';
-                bobinasManuais[index].bobina = true;
             }
             
             if (statusDiv) {
@@ -1214,7 +1214,6 @@ if (document.getElementById('contagemForm')) {
     function adicionarTrafo() {
         console.log('🔧 Função adicionarTrafo chamada');
         
-        // Salvar os dados atuais dos trafos antes de adicionar
         salvarDadosTrafosAtuais();
         
         const novoTrafo = {
@@ -1230,27 +1229,22 @@ if (document.getElementById('contagemForm')) {
             _qtd: '',
             _justificativa: '',
             tipo_material: 'trafo',
-            bobina: false
+            id: null
         };
         
         materiaisManuais.push(novoTrafo);
         materiaisPorCategoria['trafos'] = materiaisManuais;
-        
-        console.log('📦 Novo trafo adicionado:', novoTrafo);
-        console.log('📊 Total de trafos:', materiaisManuais.length);
         
         const tabsContent = document.getElementById('tab-trafos');
         if (tabsContent) {
             tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
             atualizarContadorTrafos();
             
-            // Restaurar quantidades anteriores e diferenças
             setTimeout(() => {
                 materiaisManuais.forEach((material, index) => {
                     if (material.codigo) {
                         buscarQuantidadeAnterior(material.codigo, `trafos-${index}`);
                     }
-                    // Restaurar diferença se houver quantidade
                     if (material._qtd) {
                         const idUnico = `trafos-${index}`;
                         calcularDiferencaTrafo(idUnico, material.codigo);
@@ -1266,8 +1260,6 @@ if (document.getElementById('contagemForm')) {
                     setTimeout(() => novoCodigoInput.focus(), 300);
                 }
             }
-        } else {
-            console.error('❌ Elemento tab-trafos não encontrado!');
         }
     }
     
@@ -1371,7 +1363,6 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].descricao = dados.descricao;
                 materiaisManuais[index].und = dados.und;
                 materiaisManuais[index].tipo_material = 'trafo';
-                materiaisManuais[index].bobina = false;
             }
             
             if (statusDiv) {
@@ -1396,7 +1387,6 @@ if (document.getElementById('contagemForm')) {
                 materiaisManuais[index].descricao = '';
                 materiaisManuais[index].und = '';
                 materiaisManuais[index].tipo_material = 'trafo';
-                materiaisManuais[index].bobina = false;
             }
             
             if (statusDiv) {
@@ -1465,13 +1455,12 @@ if (document.getElementById('contagemForm')) {
     }, true);
     
     // ============================================
-    // ENVIAR FORMULÁRIO (CORRIGIDO COM tipo_material)
+    // ENVIAR FORMULÁRIO (CORRIGIDO)
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // Salvar dados atuais antes de validar
         salvarDadosTrafosAtuais();
         salvarDadosBobinasAtuais();
         
@@ -1521,7 +1510,8 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        const materiaisEnviar = [];
+        const materiaisParaEnviar = [];
+        const materiaisParaDesativar = [];
         const inputsQtd = document.querySelectorAll('.input-qtd');
         let temErroValidacao = false;
         
@@ -1531,14 +1521,39 @@ if (document.getElementById('contagemForm')) {
                 const materialItem = input.closest('.material-item');
                 const codigo = materialItem.dataset.codigo;
                 const categoria = materialItem.dataset.categoria;
+                const tipoMaterial = materialItem.dataset.tipo || 'concreto';
+                const idRegistro = materialItem.dataset.id || null;
+                const tombamento = materialItem.dataset.tombamento || '';
                 
                 const justificativaInput = materialItem.querySelector('.input-justificativa');
                 const justificativa = justificativaInput ? justificativaInput.value : '';
                 
+                // VERIFICAR SE É BAIXA
+                let darBaixa = false;
                 if (categoria === 'trafos') {
                     const index = materialItem.dataset.index;
                     const checkboxBaixa = materialItem.querySelector('.checkbox-baixa-trafo');
-                    const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
+                    darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
+                } else if (categoria === 'bobinas') {
+                    const index = materialItem.dataset.index;
+                    const checkboxBaixa = materialItem.querySelector('.checkbox-baixa-bobina');
+                    darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
+                }
+                
+                // Se for baixa, NÃO criar novo registro, apenas desativar o existente
+                if (darBaixa && idRegistro && idRegistro !== 'null') {
+                    console.log(`🔴 Desativando registro ID: ${idRegistro} (${tipoMaterial}) - Tombamento: ${tombamento}`);
+                    materiaisParaDesativar.push({
+                        id: parseInt(idRegistro),
+                        obs: justificativa || `Baixa realizada por ${nome}`,
+                        tipo_material: tipoMaterial
+                    });
+                    return; // Não adiciona à lista de envio
+                }
+                
+                // Se NÃO for baixa, criar novo registro
+                if (categoria === 'trafos') {
+                    const index = materialItem.dataset.index;
                     
                     const codigoTrafo = document.getElementById(`trafo-codigo-${index}`)?.value || codigo;
                     const descricaoTrafo = document.getElementById(`trafo-descricao-${index}`)?.value || '';
@@ -1571,56 +1586,32 @@ if (document.getElementById('contagemForm')) {
                     }
                     
                     const serie = document.getElementById(`trafo-serie-${index}`)?.value || '';
-                    const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
+                    const tombamentoTrafo = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
                     const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
                     const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
                     
-                    const qtdFinal = darBaixa ? -(Math.abs(qtd)) : qtd;
-                    
-                    if (materiaisManuais[index]) {
-                        materiaisManuais[index].codigo = codigoTrafo;
-                        materiaisManuais[index].descricao = descricaoTrafo;
-                        materiaisManuais[index].und = undTrafo;
-                        materiaisManuais[index].numero_serie = serie;
-                        materiaisManuais[index].tombamento = tombamento;
-                        materiaisManuais[index].oleo = oleo;
-                        materiaisManuais[index].cor = cor;
-                        materiaisManuais[index].ativo = !darBaixa;
-                        materiaisManuais[index].tipo_material = 'trafo';
-                        materiaisManuais[index].bobina = false;
-                    }
-                    
-                    // OBJETO COMPLETO PARA ENVIO
-                    const materialEnvio = {
-                        nome: nome,
-                        matricula: matricula,
-                        data: data,
+                    materiaisParaEnviar.push({
+                        nome, matricula, data,
                         codigo: codigoTrafo,
                         descricao: descricaoTrafo,
                         und: undTrafo,
-                        qtd: qtdFinal,
+                        qtd: qtd,
                         numero_serie: serie,
-                        tombamento: tombamento,
+                        tombamento: tombamentoTrafo,
                         oleo: oleo,
                         cor: cor,
                         obs: justificativa || `Contagem diária - ${nome}`,
-                        ativo: darBaixa ? 0 : 1,
-                        tipo_material: 'trafo',
-                        bobina: false
-                    };
-                    
-                    console.log('📤 Enviando TRAFO:', materialEnvio);
-                    materiaisEnviar.push(materialEnvio);
+                        ativo: 1,
+                        tipo_material: 'trafo'
+                    });
                     
                 } else if (categoria === 'bobinas') {
                     const index = materialItem.dataset.index;
-                    const checkboxBaixa = materialItem.querySelector('.checkbox-baixa-bobina');
-                    const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
                     
                     const codigoBobina = document.getElementById(`bobina-codigo-${index}`)?.value || codigo;
                     const descricaoBobina = document.getElementById(`bobina-descricao-${index}`)?.value || '';
                     const undBobina = document.getElementById(`bobina-und-${index}`)?.value || '';
-                    const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
+                    const tombamentoBobina = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
                     
                     const validacao = validarCodigoPorCategoria(codigoBobina, 'bobinas');
                     if (!validacao.valido) {
@@ -1648,49 +1639,29 @@ if (document.getElementById('contagemForm')) {
                         return;
                     }
                     
-                    const qtdFinal = darBaixa ? -(Math.abs(qtd)) : qtd;
-                    
-                    if (bobinasManuais[index]) {
-                        bobinasManuais[index].codigo = codigoBobina;
-                        bobinasManuais[index].descricao = descricaoBobina;
-                        bobinasManuais[index].und = undBobina;
-                        bobinasManuais[index].tombamento = tombamento;
-                        bobinasManuais[index].ativo = !darBaixa;
-                        bobinasManuais[index].tipo_material = 'bobina';
-                        bobinasManuais[index].bobina = true;
-                    }
-                    
-                    // OBJETO COMPLETO PARA ENVIO
-                    const materialEnvio = {
-                        nome: nome,
-                        matricula: matricula,
-                        data: data,
+                    materiaisParaEnviar.push({
+                        nome, matricula, data,
                         codigo: codigoBobina,
                         descricao: descricaoBobina,
                         und: undBobina,
-                        qtd: qtdFinal,
+                        qtd: qtd,
                         numero_serie: null,
-                        tombamento: tombamento,
+                        tombamento: tombamentoBobina,
                         oleo: null,
                         cor: null,
                         obs: justificativa || `Contagem diária - ${nome}`,
-                        ativo: darBaixa ? 0 : 1,
-                        tipo_material: 'bobina',
-                        bobina: true
-                    };
-                    
-                    console.log('📤 Enviando BOBINA:', materialEnvio);
-                    materiaisEnviar.push(materialEnvio);
+                        ativo: 1,
+                        tipo_material: 'bobina'
+                    });
                     
                 } else {
+                    // Concretos e outros
                     const materiaisDaCategoria = materiaisPorCategoria[categoria] || [];
                     const material = materiaisDaCategoria.find(m => m.codigo === codigo);
                     
                     if (material) {
-                        const materialEnvio = {
-                            nome: nome,
-                            matricula: matricula,
-                            data: data,
+                        materiaisParaEnviar.push({
+                            nome, matricula, data,
                             codigo: material.codigo,
                             descricao: material.descricao,
                             und: material.und,
@@ -1701,12 +1672,8 @@ if (document.getElementById('contagemForm')) {
                             cor: null,
                             obs: justificativa || `Contagem diária - ${nome}`,
                             ativo: 1,
-                            tipo_material: 'concreto',
-                            bobina: false
-                        };
-                        
-                        console.log('📤 Enviando CONCRETO:', materialEnvio);
-                        materiaisEnviar.push(materialEnvio);
+                            tipo_material: 'concreto'
+                        });
                     }
                 }
             }
@@ -1716,75 +1683,107 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        if (materiaisEnviar.length === 0) {
-            mostrarMensagem('❌ Preencha a quantidade de pelo menos um material!', 'erro');
+        if (materiaisParaEnviar.length === 0 && materiaisParaDesativar.length === 0) {
+            mostrarMensagem('❌ Preencha a quantidade de pelo menos um material ou selecione "Dar baixa" em um item!', 'erro');
             return;
         }
-        
-        console.log('📦 Total de materiais a enviar:', materiaisEnviar.length);
-        console.log('📋 Materiais:', materiaisEnviar);
         
         try {
             botaoSubmit.disabled = true;
             botaoSubmit.textContent = 'Enviando...';
-            mostrarMensagem('⏳ Salvando ' + materiaisEnviar.length + ' material(is)...', 'info');
             
-            const resultados = [];
-            for (const material of materiaisEnviar) {
-                console.log(`🚀 Enviando para API: ${material.codigo} (${material.tipo_material})`);
-                
-                const response = await fetch(`${API_URL}/api/salvar`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(material)
-                });
-                
-                const resultado = await response.json();
-                console.log(`✅ Resposta para ${material.codigo}:`, resultado);
-                
-                resultados.push({ 
-                    codigo: material.codigo, 
-                    ok: response.ok, 
-                    ...resultado 
-                });
-            }
+            let totalProcessados = 0;
+            let totalDesativados = 0;
             
-            const todosSalvos = resultados.every(r => r.ok);
-            
-            if (todosSalvos) {
-                const baixas = materiaisEnviar.filter(m => m.ativo === 0).length;
-                let msg = '✅ ' + resultados.length + ' material(is) registrado(s) com sucesso!';
-                if (baixas > 0) {
-                    msg += ' (' + baixas + ' baixa(s) realizada(s))';
+            // 1. PROCESSAR DESATIVAÇÕES (BAIXAS)
+            if (materiaisParaDesativar.length > 0) {
+                mostrarMensagem(`⏳ Desativando ${materiaisParaDesativar.length} item(ns)...`, 'info');
+                
+                for (const item of materiaisParaDesativar) {
+                    try {
+                        const response = await fetch(`${API_URL}/api/desativar`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                id: item.id,
+                                obs: item.obs,
+                                tipo_material: item.tipo_material
+                            })
+                        });
+                        
+                        const resultado = await response.json();
+                        if (response.ok) {
+                            totalDesativados++;
+                            console.log(`✅ Item ID ${item.id} desativado com sucesso`);
+                        } else {
+                            console.error(`❌ Erro ao desativar ID ${item.id}:`, resultado);
+                        }
+                    } catch (error) {
+                        console.error(`❌ Erro ao desativar ID ${item.id}:`, error);
+                    }
                 }
-                mostrarMensagem(msg, 'sucesso');
-                
-                document.querySelectorAll('.input-qtd').forEach(input => input.value = '');
-                document.querySelectorAll('.input-justificativa').forEach(input => input.value = '');
-                document.querySelectorAll('.diferenca-indicador').forEach(div => div.style.display = 'none');
-                document.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina').forEach(cb => cb.checked = false);
-                
-                // Limpar cache para recarregar os dados
-                cacheQuantidades = {};
-                
-                setTimeout(async () => {
-                    await carregarItensManuais();
-                    const tabsContent = document.getElementById('tab-trafos');
-                    if (tabsContent && categoriaAtiva === 'trafos') {
-                        tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
-                        atualizarContadorTrafos();
-                    }
-                    const tabsContentBobina = document.getElementById('tab-bobinas');
-                    if (tabsContentBobina && categoriaAtiva === 'bobinas') {
-                        tabsContentBobina.innerHTML = renderizarBobinas(bobinasManuais);
-                        atualizarContadorBobinas();
-                    }
-                }, 500);
-                
-            } else {
-                const erros = resultados.filter(r => !r.ok);
-                mostrarMensagem('⚠️ Erro ao salvar: ' + erros.map(e => e.codigo).join(', '), 'erro');
             }
+            
+            // 2. PROCESSAR NOVOS REGISTROS
+            if (materiaisParaEnviar.length > 0) {
+                mostrarMensagem(`⏳ Salvando ${materiaisParaEnviar.length} material(is)...`, 'info');
+                
+                for (const material of materiaisParaEnviar) {
+                    try {
+                        const response = await fetch(`${API_URL}/api/salvar`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(material)
+                        });
+                        
+                        if (response.ok) {
+                            totalProcessados++;
+                            console.log(`✅ ${material.tipo_material} ${material.codigo} salvo com sucesso`);
+                        } else {
+                            console.error(`❌ Erro ao salvar ${material.codigo}:`, await response.text());
+                        }
+                    } catch (error) {
+                        console.error(`❌ Erro ao salvar ${material.codigo}:`, error);
+                    }
+                }
+            }
+            
+            // MENSAGEM FINAL
+            let msg = '';
+            if (totalProcessados > 0 && totalDesativados > 0) {
+                msg = `✅ ${totalProcessados} material(is) registrado(s) e ${totalDesativados} baixa(s) realizada(s) com sucesso!`;
+            } else if (totalProcessados > 0) {
+                msg = `✅ ${totalProcessados} material(is) registrado(s) com sucesso!`;
+            } else if (totalDesativados > 0) {
+                msg = `✅ ${totalDesativados} baixa(s) realizada(s) com sucesso!`;
+            } else {
+                msg = '⚠️ Nenhuma operação foi realizada com sucesso.';
+            }
+            mostrarMensagem(msg, 'sucesso');
+            
+            // LIMPAR CAMPOS
+            document.querySelectorAll('.input-qtd').forEach(input => input.value = '');
+            document.querySelectorAll('.input-justificativa').forEach(input => input.value = '');
+            document.querySelectorAll('.diferenca-indicador').forEach(div => div.style.display = 'none');
+            document.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina').forEach(cb => cb.checked = false);
+            
+            // RECARREGAR DADOS
+            cacheQuantidades = {};
+            setTimeout(async () => {
+                await carregarTodosRegistros();
+                await carregarItensManuais();
+                
+                const tabsContent = document.getElementById('tab-trafos');
+                if (tabsContent && categoriaAtiva === 'trafos') {
+                    tabsContent.innerHTML = renderizarTrafos(materiaisManuais);
+                    atualizarContadorTrafos();
+                }
+                const tabsContentBobina = document.getElementById('tab-bobinas');
+                if (tabsContentBobina && categoriaAtiva === 'bobinas') {
+                    tabsContentBobina.innerHTML = renderizarBobinas(bobinasManuais);
+                    atualizarContadorBobinas();
+                }
+            }, 500);
             
         } catch (error) {
             console.error('❌ Erro:', error);
@@ -1804,7 +1803,6 @@ if (document.getElementById('contagemForm')) {
         const inputAnterior = document.getElementById(`qtd-anterior-${idUnico}`);
         if (!inputAnterior || !codigo) return;
         
-        // Verificar se temos dados em cache
         if (cacheQuantidades[codigo]) {
             const dados = cacheQuantidades[codigo];
             inputAnterior.value = dados.qtd || '0';
@@ -1814,7 +1812,6 @@ if (document.getElementById('contagemForm')) {
         }
         
         try {
-            // Buscar a contagem anterior para este código
             const response = await fetch(`${API_URL}/api/contagem-anterior`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1832,7 +1829,6 @@ if (document.getElementById('contagemForm')) {
                 inputAnterior.value = qtdAnterior;
                 inputAnterior.title = `Última contagem: ${formatarData(resultado.data_anterior)}`;
                 inputAnterior.classList.add('tem-dado-anterior');
-                console.log(`📊 Contagem anterior para ${codigo}: ${qtdAnterior} (${formatarData(resultado.data_anterior)})`);
             } else {
                 cacheQuantidades[codigo] = {
                     qtd: '0',
@@ -1841,7 +1837,6 @@ if (document.getElementById('contagemForm')) {
                 inputAnterior.value = '0';
                 inputAnterior.title = 'Nenhuma contagem anterior encontrada';
                 inputAnterior.classList.add('sem-dado-anterior');
-                console.log(`📊 Nenhuma contagem anterior para ${codigo}`);
             }
             
         } catch (error) {
