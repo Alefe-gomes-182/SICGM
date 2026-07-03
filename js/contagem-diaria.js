@@ -1189,6 +1189,7 @@ if (document.getElementById('contagemForm')) {
         
         if (nObraInput && nObraInput.value.trim() && checkbox && checkbox.checked) {
             if (alertaDiv) alertaDiv.style.display = 'none';
+            nObraInput.classList.remove('input-error');
         }
     }
     
@@ -1199,6 +1200,7 @@ if (document.getElementById('contagemForm')) {
         
         if (nObraInput && nObraInput.value.trim() && checkbox && checkbox.checked) {
             if (alertaDiv) alertaDiv.style.display = 'none';
+            nObraInput.classList.remove('input-error');
         }
     }
     
@@ -1220,6 +1222,14 @@ if (document.getElementById('contagemForm')) {
                     nObraInput.focus();
                     setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
                 }
+                mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
+            }
+        } else {
+            if (alertaDiv) {
+                alertaDiv.style.display = 'none';
+            }
+            if (nObraInput) {
+                nObraInput.classList.remove('input-error');
             }
         }
     }
@@ -1242,6 +1252,14 @@ if (document.getElementById('contagemForm')) {
                     nObraInput.focus();
                     setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
                 }
+                mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
+            }
+        } else {
+            if (alertaDiv) {
+                alertaDiv.style.display = 'none';
+            }
+            if (nObraInput) {
+                nObraInput.classList.remove('input-error');
             }
         }
     }
@@ -1372,11 +1390,21 @@ if (document.getElementById('contagemForm')) {
         const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
         const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
         const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
-        const nObra = document.getElementById(`n-obra-trafos-${index}`)?.value || '';
         
-        if (!codigo || !descricao || !und || !serie || !tombamento || !oleo || !cor || !nObra) {
+        // Campos obrigatórios sempre (exceto N Obra)
+        if (!codigo || !descricao || !und || !serie || !tombamento || !oleo || !cor) {
             return false;
         }
+        
+        // N Obra só é obrigatório se o checkbox "Dar baixa" estiver marcado
+        const checkboxBaixa = document.querySelector(`.checkbox-baixa-trafo[data-index="${index}"]`);
+        if (checkboxBaixa && checkboxBaixa.checked) {
+            const nObra = document.getElementById(`n-obra-trafos-${index}`)?.value || '';
+            if (!nObra) {
+                return false;
+            }
+        }
+        
         return true;
     }
     
@@ -1397,11 +1425,21 @@ if (document.getElementById('contagemForm')) {
         const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
         const und = document.getElementById(`bobina-und-${index}`)?.value || '';
         const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
-        const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
         
-        if (!codigo || !descricao || !und || !tombamento || !nObra) {
+        // Campos obrigatórios sempre (exceto N Obra)
+        if (!codigo || !descricao || !und || !tombamento) {
             return false;
         }
+        
+        // N Obra só é obrigatório se o checkbox "Dar baixa" estiver marcado
+        const checkboxBaixa = document.querySelector(`.checkbox-baixa-bobina[data-index="${index}"]`);
+        if (checkboxBaixa && checkboxBaixa.checked) {
+            const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
+            if (!nObra) {
+                return false;
+            }
+        }
+        
         return true;
     }
     
