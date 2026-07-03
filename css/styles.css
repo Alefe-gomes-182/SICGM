@@ -1244,3 +1244,134 @@ body {
     background: #4299E1;
     color: white;
 }
+
+/* Estilos para concretos */
+.concreto-entradas-container {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.concreto-entradas-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.concreto-entradas-header label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 14px;
+}
+
+.btn-add-concreto-entrada {
+    background: #48bb78;
+    color: white;
+    border: none;
+    padding: 5px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.btn-add-concreto-entrada:hover {
+    background: #38a169;
+    transform: translateY(-1px);
+}
+
+.concreto-entrada-item {
+    background: white;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.concreto-entrada-fields {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.concreto-entrada-fields .material-field {
+    flex: 1;
+    min-width: 120px;
+}
+
+.concreto-entrada-fields .material-field label {
+    font-size: 12px;
+    margin-bottom: 3px;
+}
+
+.concreto-entrada-valor-field,
+.concreto-entrada-qtd-field {
+    flex: 1;
+}
+
+.concreto-entrada-qtd-field[style*="display: none"] {
+    display: none !important;
+}
+
+.btn-remover-entrada {
+    background: #fc8181;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+    margin-bottom: 4px;
+}
+
+.btn-remover-entrada:hover {
+    background: #e53e3e;
+}
+
+.concreto-total {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #e2e8f0;
+    font-weight: 600;
+    color: #2d3748;
+    text-align: right;
+}
+
+.diferenca-erro {
+    background: #fed7d7 !important;
+    color: #c53030 !important;
+    border-color: #fc8181 !important;
+}
+
+.diferenca-ok {
+    background: #c6f6d5 !important;
+    color: #276749 !important;
+    border-color: #48bb78 !important;
+}
+
+/* Estilos para selects em bobinas/trafos */
+.input-extra select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.input-extra select:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.input-extra select option {
+    padding: 5px;
+}

@@ -53,6 +53,13 @@ if (document.getElementById('contagemForm')) {
     };
     
     // ============================================
+    // CONFIGURAÇÕES DE CORES E ÓLEOS
+    // ============================================
+    
+    const CORES = ['AZUL', 'VERDE', 'CINZA'];
+    const OLEOS = ['VEGETAL', 'MINERAL'];
+    
+    // ============================================
     // VARIÁVEIS GLOBAIS
     // ============================================
     
@@ -360,10 +367,10 @@ if (document.getElementById('contagemForm')) {
                             tipo_material: 'bobina',
                             id: item.id,
                             numero_serie: null,
-                            oleo: null,
-                            cor: null,
+                            oleo: item.oleo || '',
+                            cor: item.cor || '',
                             _qtd: qtdSalva,
-                            _justificativa: ''
+                            _n_obra: ''
                         });
                     }
                 } 
@@ -383,7 +390,7 @@ if (document.getElementById('contagemForm')) {
                             tipo_material: 'trafo',
                             id: item.id,
                             _qtd: qtdSalva,
-                            _justificativa: ''
+                            _n_obra: ''
                         });
                     }
                 }
@@ -405,10 +412,10 @@ if (document.getElementById('contagemForm')) {
                                 tipo_material: 'bobina',
                                 id: item.id,
                                 numero_serie: null,
-                                oleo: null,
-                                cor: null,
+                                oleo: item.oleo || '',
+                                cor: item.cor || '',
                                 _qtd: qtdSalva,
-                                _justificativa: ''
+                                _n_obra: ''
                             });
                         }
                     } else if (isTrafo && !isBobina) {
@@ -427,7 +434,7 @@ if (document.getElementById('contagemForm')) {
                                 tipo_material: 'trafo',
                                 id: item.id,
                                 _qtd: qtdSalva,
-                                _justificativa: ''
+                                _n_obra: ''
                             });
                         }
                     }
@@ -545,6 +552,10 @@ if (document.getElementById('contagemForm')) {
     // ============================================
     
     function renderizarMateriaisCategoria(materiais, categoria) {
+        if (categoria === 'concretos') {
+            return renderizarConcretos(materiais, categoria);
+        }
+        
         if (materiais.length === 0) {
             return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
                 <p style="font-size: 2em;">📭</p>
@@ -605,6 +616,233 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
+    // RENDERIZAR CONCRETOS (COM MÚLTIPLAS ENTRADAS)
+    // ============================================
+    
+    function renderizarConcretos(materiais, categoria) {
+        if (materiais.length === 0) {
+            return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
+                <p style="font-size: 2em;">📭</p>
+                <p>Nenhum material configurado nesta categoria</p>
+            </div>`;
+        }
+        
+        let html = '';
+        const tipoMaterial = 'concreto';
+        
+        materiais.forEach((material, index) => {
+            const idUnico = `${categoria}-${index}`;
+            
+            html += `
+                <div class="material-item concreto-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}">
+                    <div class="material-row">
+                        <div class="material-field">
+                            <label>Código</label>
+                            <input type="text" value="${material.codigo}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label>Descrição</label>
+                            <input type="text" value="${material.descricao}" class="input-descricao" readonly>
+                        </div>
+                        <div class="material-field">
+                            <label>UND</label>
+                            <input type="text" value="${material.und}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label for="qtd-${idUnico}">QTD *</label>
+                            <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
+                                class="input-qtd" onchange="calcularDiferencaConcreto('${idUnico}', '${material.codigo}')">
+                        </div>
+                        <div class="material-field">
+                            <label>Últ. Cont.</label>
+                            <input type="text" id="qtd-anterior-${idUnico}" readonly 
+                                class="input-readonly input-qtd-anterior" value="Carregando...">
+                        </div>
+                    </div>
+                    <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
+                    
+                    <!-- Área de entradas de concreto -->
+                    <div class="concreto-entradas-container" id="concreto-entradas-${idUnico}">
+                        <div class="concreto-entradas-header">
+                            <label>Entradas de Concreto</label>
+                            <button type="button" class="btn-add-concreto-entrada" onclick="adicionarEntradaConcreto('${idUnico}')">
+                                + Adicionar Entrada
+                            </button>
+                        </div>
+                        <div class="concreto-entradas-list" id="concreto-entradas-list-${idUnico}">
+                            <!-- As entradas serão adicionadas aqui dinamicamente -->
+                        </div>
+                        <div class="concreto-total" id="concreto-total-${idUnico}">
+                            Total: <span id="concreto-total-valor-${idUnico}">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        setTimeout(() => {
+            materiais.forEach((material, index) => {
+                buscarQuantidadeAnterior(material.codigo, `${categoria}-${index}`, null, 'concreto');
+                // Inicializar com uma entrada padrão
+                const idUnico = `${categoria}-${index}`;
+                adicionarEntradaConcreto(idUnico);
+            });
+        }, 100);
+        
+        return html;
+    }
+    
+    // ============================================
+    // ADICIONAR ENTRADA DE CONCRETO
+    // ============================================
+    
+    function adicionarEntradaConcreto(idUnico) {
+        const listDiv = document.getElementById(`concreto-entradas-list-${idUnico}`);
+        if (!listDiv) return;
+        
+        const entradaId = `entrada-${idUnico}-${Date.now()}`;
+        const index = listDiv.children.length;
+        
+        const entradaDiv = document.createElement('div');
+        entradaDiv.className = 'concreto-entrada-item';
+        entradaDiv.id = entradaId;
+        entradaDiv.innerHTML = `
+            <div class="concreto-entrada-fields">
+                <div class="material-field">
+                    <label>Tipo</label>
+                    <select class="concreto-entrada-tipo" onchange="toggleConcretoEntradaFields('${entradaId}')">
+                        <option value="n_obra">N Obra</option>
+                        <option value="recebimento">Recebimento</option>
+                    </select>
+                </div>
+                <div class="material-field concreto-entrada-valor-field">
+                    <label>Nº Obra</label>
+                    <input type="text" class="concreto-entrada-valor" placeholder="Número da obra..." 
+                        onchange="validarConcretoEntrada('${idUnico}', '${entradaId}')">
+                </div>
+                <div class="material-field concreto-entrada-qtd-field" style="display: block;">
+                    <label>QTD Saída (-)</label>
+                    <input type="number" step="0.01" class="concreto-entrada-qtd" placeholder="0.00" 
+                        onchange="validarConcretoEntrada('${idUnico}', '${entradaId}')">
+                </div>
+                <button type="button" class="btn-remover-entrada" onclick="removerEntradaConcreto('${idUnico}', '${entradaId}')">✕</button>
+            </div>
+        `;
+        
+        listDiv.appendChild(entradaDiv);
+        atualizarTotalConcreto(idUnico);
+    }
+    
+    function toggleConcretoEntradaFields(entradaId) {
+        const entradaDiv = document.getElementById(entradaId);
+        if (!entradaDiv) return;
+        
+        const tipoSelect = entradaDiv.querySelector('.concreto-entrada-tipo');
+        const valorField = entradaDiv.querySelector('.concreto-entrada-valor-field');
+        const qtdField = entradaDiv.querySelector('.concreto-entrada-qtd-field');
+        const valorInput = entradaDiv.querySelector('.concreto-entrada-valor');
+        const qtdInput = entradaDiv.querySelector('.concreto-entrada-qtd');
+        
+        if (tipoSelect.value === 'n_obra') {
+            valorField.querySelector('label').textContent = 'Nº Obra';
+            valorInput.placeholder = 'Número da obra...';
+            qtdField.querySelector('label').textContent = 'QTD Saída (-)';
+            qtdField.style.display = 'block';
+            qtdInput.placeholder = '0.00';
+            qtdInput.value = qtdInput.value ? -Math.abs(parseFloat(qtdInput.value)) : '';
+        } else {
+            valorField.querySelector('label').textContent = 'Nº Recebimento';
+            valorInput.placeholder = 'Número do recebimento...';
+            qtdField.querySelector('label').textContent = 'QTD Recebida (+)';
+            qtdField.style.display = 'block';
+            qtdInput.placeholder = '0.00';
+            qtdInput.value = qtdInput.value ? Math.abs(parseFloat(qtdInput.value)) : '';
+        }
+    }
+    
+    function removerEntradaConcreto(idUnico, entradaId) {
+        const entradaDiv = document.getElementById(entradaId);
+        if (entradaDiv && confirm('Remover esta entrada?')) {
+            entradaDiv.remove();
+            atualizarTotalConcreto(idUnico);
+        }
+    }
+    
+    function validarConcretoEntrada(idUnico, entradaId) {
+        const entradaDiv = document.getElementById(entradaId);
+        if (!entradaDiv) return;
+        
+        const tipoSelect = entradaDiv.querySelector('.concreto-entrada-tipo');
+        const valorInput = entradaDiv.querySelector('.concreto-entrada-valor');
+        const qtdInput = entradaDiv.querySelector('.concreto-entrada-qtd');
+        
+        // Validar que o valor está preenchido
+        if (!valorInput.value.trim()) {
+            valorInput.classList.add('input-error');
+            setTimeout(() => valorInput.classList.remove('input-error'), 2000);
+            return;
+        }
+        
+        // Validar quantidade
+        if (!qtdInput.value || parseFloat(qtdInput.value) === 0) {
+            qtdInput.classList.add('input-error');
+            setTimeout(() => qtdInput.classList.remove('input-error'), 2000);
+            return;
+        }
+        
+        // Ajustar sinal da quantidade baseado no tipo
+        const qtd = parseFloat(qtdInput.value);
+        if (tipoSelect.value === 'n_obra' && qtd > 0) {
+            qtdInput.value = -qtd;
+        } else if (tipoSelect.value === 'recebimento' && qtd < 0) {
+            qtdInput.value = Math.abs(qtd);
+        }
+        
+        atualizarTotalConcreto(idUnico);
+    }
+    
+    function atualizarTotalConcreto(idUnico) {
+        const listDiv = document.getElementById(`concreto-entradas-list-${idUnico}`);
+        const totalSpan = document.getElementById(`concreto-total-valor-${idUnico}`);
+        if (!listDiv || !totalSpan) return;
+        
+        let total = 0;
+        const entradas = listDiv.querySelectorAll('.concreto-entrada-item');
+        
+        entradas.forEach(entrada => {
+            const qtdInput = entrada.querySelector('.concreto-entrada-qtd');
+            if (qtdInput && qtdInput.value) {
+                total += parseFloat(qtdInput.value) || 0;
+            }
+        });
+        
+        totalSpan.textContent = total.toFixed(2);
+        
+        // Verificar se total é igual à diferença
+        const qtdAtual = parseFloat(document.getElementById(`qtd-${idUnico}`)?.value) || 0;
+        const qtdAnterior = parseFloat(document.getElementById(`qtd-anterior-${idUnico}`)?.value) || 0;
+        const diferenca = qtdAtual - qtdAnterior;
+        
+        const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
+        if (diferencaDiv) {
+            if (Math.abs(total - diferenca) > 0.001) {
+                diferencaDiv.style.display = 'flex';
+                diferencaDiv.className = 'diferenca-indicador diferenca-erro';
+                diferencaDiv.innerHTML = `❌ Total das entradas (${total.toFixed(2)}) não bate com a diferença (${diferenca.toFixed(2)})`;
+            } else {
+                diferencaDiv.style.display = 'flex';
+                diferencaDiv.className = 'diferenca-indicador diferenca-ok';
+                diferencaDiv.innerHTML = `✅ Total das entradas: ${total.toFixed(2)} (diferença: ${diferenca.toFixed(2)})`;
+            }
+        }
+    }
+    
+    function calcularDiferencaConcreto(idUnico, codigo) {
+        calcularDiferenca(idUnico, codigo);
+        atualizarTotalConcreto(idUnico);
+    }
+    
+    // ============================================
     // RENDERIZAR BOBINAS (CORRIGIDO)
     // ============================================
 
@@ -627,7 +865,7 @@ if (document.getElementById('contagemForm')) {
         bobinasAtivas.forEach((material, index) => {
             const idUnico = `bobinas-${index}`;
             const codigoBobina = material.codigo || '';
-            const existeNoBanco = codigoBobina ? codigoExisteNoBanco(codigoBobina) : false;
+            const existeNoBanco = material.id !== null && material.id !== undefined && material.id !== 'null' && material.id !== '';
             const temDescricao = material.descricao && material.descricao.trim() !== '';
             const qtdSalva = material._qtd || '';
             const idRegistro = material.id || null;
@@ -692,6 +930,20 @@ if (document.getElementById('contagemForm')) {
                             <input type="text" id="bobina-tombamento-${idx}" value="${material.tombamento || ''}" 
                                 placeholder="Tombamento" class="input-extra" required>
                         </div>
+                        <div class="material-field">
+                            <label for="bobina-cor-${idx}">Cor *</label>
+                            <select id="bobina-cor-${idx}" class="input-extra" required>
+                                <option value="">Selecione...</option>
+                                ${CORES.map(cor => `<option value="${cor}" ${material.cor === cor ? 'selected' : ''}>${cor}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="material-field">
+                            <label for="bobina-oleo-${idx}">Óleo *</label>
+                            <select id="bobina-oleo-${idx}" class="input-extra" required>
+                                <option value="">Selecione...</option>
+                                ${OLEOS.map(oleo => `<option value="${oleo}" ${material.oleo === oleo ? 'selected' : ''}>${oleo}</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
                     
                     <div class="material-row material-row-qtd">
@@ -712,18 +964,19 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
-                            <label for="justificativa-${idUnico}">Justificativa</label>
-                            <input type="text" id="justificativa-${idUnico}" 
-                                value="${material._justificativa || ''}"
-                                placeholder="${existeNoBanco ? 'Justificativa para esta bobina...' : 'Justificativa...'}" 
+                            <label for="n-obra-${idUnico}">N Obra *</label>
+                            <input type="text" id="n-obra-${idUnico}" 
+                                value="${material._n_obra || ''}"
+                                placeholder="Número da obra..." 
                                 class="input-justificativa"
-                                ${existeNoBanco ? `oninput="verificarJustificativaBobina(${idx})"` : ''}>
+                                ${existeNoBanco ? `oninput="verificarNObraBobina(${idx})"` : ''}
+                                required>
                         </div>
                     </div>
                     
                     ${existeNoBanco ? `
                     <div id="alerta-baixa-bobina-${idx}" class="alerta-baixa" style="display: none;">
-                        ⚠️ Para dar baixa, preencha a justificativa.
+                        ⚠️ Para dar baixa, preencha o Nº da Obra.
                     </div>
                     ` : ''}
                 </div>
@@ -777,7 +1030,7 @@ if (document.getElementById('contagemForm')) {
         trafosAtivos.forEach((material, index) => {
             const idUnico = `trafos-${index}`;
             const codigoTrafo = material.codigo || '';
-            const existeNoBanco = codigoTrafo ? codigoExisteNoBanco(codigoTrafo) : false;
+            const existeNoBanco = material.id !== null && material.id !== undefined && material.id !== 'null' && material.id !== '';
             const temDescricao = material.descricao && material.descricao.trim() !== '';
             const qtdSalva = material._qtd || '';
             const idRegistro = material.id || null;
@@ -849,13 +1102,17 @@ if (document.getElementById('contagemForm')) {
                         </div>
                         <div class="material-field">
                             <label for="trafo-oleo-${idx}">Óleo *</label>
-                            <input type="text" id="trafo-oleo-${idx}" value="${material.oleo || ''}" 
-                                placeholder="Tipo de óleo" class="input-extra" required>
+                            <select id="trafo-oleo-${idx}" class="input-extra" required>
+                                <option value="">Selecione...</option>
+                                ${OLEOS.map(oleo => `<option value="${oleo}" ${material.oleo === oleo ? 'selected' : ''}>${oleo}</option>`).join('')}
+                            </select>
                         </div>
                         <div class="material-field">
                             <label for="trafo-cor-${idx}">Cor *</label>
-                            <input type="text" id="trafo-cor-${idx}" value="${material.cor || ''}" 
-                                placeholder="Cor" class="input-extra" required>
+                            <select id="trafo-cor-${idx}" class="input-extra" required>
+                                <option value="">Selecione...</option>
+                                ${CORES.map(cor => `<option value="${cor}" ${material.cor === cor ? 'selected' : ''}>${cor}</option>`).join('')}
+                            </select>
                         </div>
                     </div>
                     
@@ -877,18 +1134,19 @@ if (document.getElementById('contagemForm')) {
                     
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
-                            <label for="justificativa-${idUnico}">Justificativa</label>
-                            <input type="text" id="justificativa-${idUnico}" 
-                                value="${material._justificativa || ''}"
-                                placeholder="${existeNoBanco ? 'Justificativa para este material...' : 'Justificativa...'}" 
+                            <label for="n-obra-${idUnico}">N Obra *</label>
+                            <input type="text" id="n-obra-${idUnico}" 
+                                value="${material._n_obra || ''}"
+                                placeholder="Número da obra..." 
                                 class="input-justificativa"
-                                ${existeNoBanco ? `oninput="verificarJustificativaTrafo(${idx})"` : ''}>
+                                ${existeNoBanco ? `oninput="verificarNObraTrafo(${idx})"` : ''}
+                                required>
                         </div>
                     </div>
                     
                     ${existeNoBanco ? `
                     <div id="alerta-baixa-trafo-${idx}" class="alerta-baixa" style="display: none;">
-                        ⚠️ Para dar baixa, preencha a justificativa.
+                        ⚠️ Para dar baixa, preencha o Nº da Obra.
                     </div>
                     ` : ''}
                 </div>
@@ -920,151 +1178,70 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ADICIONAR BOBINA
+    // FUNÇÕES PARA BOBINAS E TRAFOS (N OBRA)
     // ============================================
     
-    function adicionarBobina() {
-        console.log('🧵 Função adicionarBobina chamada');
+    function verificarNObraBobina(index) {
+        const nObraInput = document.getElementById(`n-obra-bobinas-${index}`);
+        const checkbox = document.querySelector(`.checkbox-baixa-bobina[data-index="${index}"]`);
+        const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
         
-        salvarDadosBobinasAtuais();
+        if (nObraInput && nObraInput.value.trim() && checkbox && checkbox.checked) {
+            if (alertaDiv) alertaDiv.style.display = 'none';
+        }
+    }
+    
+    function verificarNObraTrafo(index) {
+        const nObraInput = document.getElementById(`n-obra-trafos-${index}`);
+        const checkbox = document.querySelector(`.checkbox-baixa-trafo[data-index="${index}"]`);
+        const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
         
-        const novaBobina = {
-            codigo: '',
-            descricao: '',
-            und: '',
-            tombamento: '',
-            ativo: true,
-            isNew: true,
-            _qtd: '',
-            _justificativa: '',
-            tipo_material: 'bobina',
-            numero_serie: null,
-            oleo: null,
-            cor: null,
-            id: null
-        };
+        if (nObraInput && nObraInput.value.trim() && checkbox && checkbox.checked) {
+            if (alertaDiv) alertaDiv.style.display = 'none';
+        }
+    }
+    
+    function toggleBaixaBobina(index, checkbox) {
+        const nObraInput = document.getElementById(`n-obra-bobinas-${index}`);
+        const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
         
-        bobinasManuais.push(novaBobina);
-        materiaisPorCategoria['bobinas'] = bobinasManuais;
-        
-        const tabsContent = document.getElementById('tab-bobinas');
-        if (tabsContent) {
-            tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
-            atualizarContadorBobinas();
+        if (checkbox.checked) {
+            const nObra = nObraInput ? nObraInput.value.trim() : '';
             
-            setTimeout(() => {
-                bobinasManuais.forEach((material, index) => {
-                    if (material.codigo) {
-                        buscarQuantidadeAnterior(material.codigo, `bobinas-${index}`, material.tombamento, 'bobina');
-                    }
-                    if (material._qtd) {
-                        const idUnico = `bobinas-${index}`;
-                        calcularDiferencaBobina(idUnico, material.codigo);
-                    }
-                });
-            }, 100);
-            
-            const ultimoItem = tabsContent.querySelector('.bobina-item:last-child');
-            if (ultimoItem) {
-                ultimoItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                const novoCodigoInput = ultimoItem.querySelector('#bobina-codigo-' + (bobinasManuais.length - 1));
-                if (novoCodigoInput) {
-                    setTimeout(() => novoCodigoInput.focus(), 300);
+            if (!nObra) {
+                checkbox.checked = false;
+                if (alertaDiv) {
+                    alertaDiv.style.display = 'block';
+                    setTimeout(() => { alertaDiv.style.display = 'none'; }, 3000);
+                }
+                if (nObraInput) {
+                    nObraInput.classList.add('input-error');
+                    nObraInput.focus();
+                    setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
                 }
             }
         }
     }
     
-    // ============================================
-    // SALVAR DADOS ATUAIS DAS BOBINAS (CORRIGIDO)
-    // ============================================
-    
-    function salvarDadosBobinasAtuais() {
-        const bobinaItems = document.querySelectorAll('.bobina-item');
-        bobinaItems.forEach((item) => {
-            const index = parseInt(item.dataset.index);
-            if (isNaN(index) || index < 0 || index >= bobinasManuais.length) {
-                console.warn('⚠️ Índice inválido em salvarDadosBobinasAtuais:', item.dataset.index);
-                return;
-            }
-            
-            const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
-            const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
-            const und = document.getElementById(`bobina-und-${index}`)?.value || '';
-            const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
-            const qtd = document.getElementById(`qtd-bobinas-${index}`)?.value || '';
-            const justificativa = document.getElementById(`justificativa-bobinas-${index}`)?.value || '';
-            
-            bobinasManuais[index].codigo = codigo;
-            bobinasManuais[index].descricao = descricao;
-            bobinasManuais[index].und = und;
-            bobinasManuais[index].tombamento = tombamento;
-            bobinasManuais[index]._qtd = qtd;
-            bobinasManuais[index]._justificativa = justificativa;
-            bobinasManuais[index].tipo_material = 'bobina';
-            bobinasManuais[index].id = item.dataset.id || null;
-        });
-    }
-    
-    // ============================================
-    // SALVAR DADOS ATUAIS DOS TRAFOS (CORRIGIDO)
-    // ============================================
-    
-    function salvarDadosTrafosAtuais() {
-        const trafoItems = document.querySelectorAll('.trafo-item');
-        trafoItems.forEach((item) => {
-            const index = parseInt(item.dataset.index);
-            if (isNaN(index) || index < 0 || index >= materiaisManuais.length) {
-                console.warn('⚠️ Índice inválido em salvarDadosTrafosAtuais:', item.dataset.index);
-                return;
-            }
-            
-            const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
-            const descricao = document.getElementById(`trafo-descricao-${index}`)?.value || '';
-            const und = document.getElementById(`trafo-und-${index}`)?.value || '';
-            const serie = document.getElementById(`trafo-serie-${index}`)?.value || '';
-            const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
-            const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
-            const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
-            const qtd = document.getElementById(`qtd-trafos-${index}`)?.value || '';
-            const justificativa = document.getElementById(`justificativa-trafos-${index}`)?.value || '';
-            
-            materiaisManuais[index].codigo = codigo;
-            materiaisManuais[index].descricao = descricao;
-            materiaisManuais[index].und = und;
-            materiaisManuais[index].numero_serie = serie;
-            materiaisManuais[index].tombamento = tombamento;
-            materiaisManuais[index].oleo = oleo;
-            materiaisManuais[index].cor = cor;
-            materiaisManuais[index]._qtd = qtd;
-            materiaisManuais[index]._justificativa = justificativa;
-            materiaisManuais[index].tipo_material = 'trafo';
-            materiaisManuais[index].id = item.dataset.id || null;
-        });
-    }
-    
-    // ============================================
-    // REMOVER BOBINA
-    // ============================================
-    
-    function removerBobina(index) {
-        const bobina = bobinasManuais[index];
-        const codigo = bobina?.codigo || '';
+    function toggleBaixaTrafo(index, checkbox) {
+        const nObraInput = document.getElementById(`n-obra-trafos-${index}`);
+        const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
         
-        if (codigo && codigoExisteNoBanco(codigo)) {
-            mostrarMensagem('❌ Esta bobina já está registrada no banco de dados e não pode ser removida. Use a opção "Dar baixa" para desativá-la.', 'erro');
-            return;
-        }
-        
-        if (confirm('Tem certeza que deseja remover esta bobina? Esta ação não pode ser desfeita.')) {
-            bobinasManuais.splice(index, 1);
-            materiaisPorCategoria['bobinas'] = bobinasManuais;
+        if (checkbox.checked) {
+            const nObra = nObraInput ? nObraInput.value.trim() : '';
             
-            const tabsContent = document.getElementById('tab-bobinas');
-            tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
-            atualizarContadorBobinas();
-            
-            mostrarMensagem('✅ Bobina removida com sucesso!', 'sucesso');
+            if (!nObra) {
+                checkbox.checked = false;
+                if (alertaDiv) {
+                    alertaDiv.style.display = 'block';
+                    setTimeout(() => { alertaDiv.style.display = 'none'; }, 3000);
+                }
+                if (nObraInput) {
+                    nObraInput.classList.add('input-error');
+                    nObraInput.focus();
+                    setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
+                }
+            }
         }
     }
     
@@ -1171,52 +1348,6 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CONTROLE DE BAIXA DE BOBINA
-    // ============================================
-    
-    function toggleBaixaBobina(index, checkbox) {
-        const justificativaInput = document.getElementById(`justificativa-bobinas-${index}`);
-        const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
-        
-        if (checkbox.checked) {
-            const justificativa = justificativaInput ? justificativaInput.value.trim() : '';
-            
-            if (!justificativa) {
-                checkbox.checked = false;
-                if (alertaDiv) {
-                    alertaDiv.style.display = 'block';
-                    setTimeout(() => { alertaDiv.style.display = 'none'; }, 3000);
-                }
-                if (justificativaInput) {
-                    justificativaInput.classList.add('input-error');
-                    justificativaInput.focus();
-                    setTimeout(() => justificativaInput.classList.remove('input-error'), 2000);
-                }
-            }
-        }
-    }
-    
-    function verificarJustificativaBobina(index) {
-        const justificativaInput = document.getElementById(`justificativa-bobinas-${index}`);
-        const checkbox = document.querySelector(`.checkbox-baixa-bobina[data-index="${index}"]`);
-        const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
-        
-        if (justificativaInput && justificativaInput.value.trim() && checkbox && checkbox.checked) {
-            if (alertaDiv) alertaDiv.style.display = 'none';
-        }
-    }
-    
-    function atualizarContadorBobinas() {
-        const btnBobina = document.querySelector('.tab-btn[data-categoria="bobinas"] .tab-contador');
-        if (btnBobina) {
-            const ativas = bobinasManuais.filter(b => {
-                return b.ativo !== false && b.tipo_material === 'bobina';
-            });
-            btnBobina.textContent = ativas.length;
-        }
-    }
-    
-    // ============================================
     // FUNÇÕES DE TRAFO
     // ============================================
     
@@ -1233,8 +1364,9 @@ if (document.getElementById('contagemForm')) {
         const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
         const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
         const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
+        const nObra = document.getElementById(`n-obra-trafos-${index}`)?.value || '';
         
-        if (!codigo || !descricao || !und || !serie || !tombamento || !oleo || !cor) {
+        if (!codigo || !descricao || !und || !serie || !tombamento || !oleo || !cor || !nObra) {
             return false;
         }
         return true;
@@ -1250,8 +1382,11 @@ if (document.getElementById('contagemForm')) {
         const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
         const und = document.getElementById(`bobina-und-${index}`)?.value || '';
         const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
+        const cor = document.getElementById(`bobina-cor-${index}`)?.value || '';
+        const oleo = document.getElementById(`bobina-oleo-${index}`)?.value || '';
+        const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
         
-        if (!codigo || !descricao || !und || !tombamento) {
+        if (!codigo || !descricao || !und || !tombamento || !cor || !oleo || !nObra) {
             return false;
         }
         return true;
@@ -1269,40 +1404,163 @@ if (document.getElementById('contagemForm')) {
         calcularDiferenca(idUnico, codigo);
     }
     
-    function verificarJustificativaTrafo(index) {
-        const justificativaInput = document.getElementById(`justificativa-trafos-${index}`);
-        const checkbox = document.querySelector(`.checkbox-baixa-trafo[data-index="${index}"]`);
-        const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
-        
-        if (justificativaInput && justificativaInput.value.trim() && checkbox && checkbox.checked) {
-            if (alertaDiv) alertaDiv.style.display = 'none';
-        }
-    }
+    // ============================================
+    // ADICIONAR BOBINA (CORRIGIDO - ORDEM)
+    // ============================================
     
-    function toggleBaixaTrafo(index, checkbox) {
-        const justificativaInput = document.getElementById(`justificativa-trafos-${index}`);
-        const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
+    function adicionarBobina() {
+        console.log('🧵 Função adicionarBobina chamada');
         
-        if (checkbox.checked) {
-            const justificativa = justificativaInput ? justificativaInput.value.trim() : '';
+        salvarDadosBobinasAtuais();
+        
+        const novaBobina = {
+            codigo: '',
+            descricao: '',
+            und: '',
+            tombamento: '',
+            cor: '',
+            oleo: '',
+            ativo: true,
+            isNew: true,
+            _qtd: '',
+            _n_obra: '',
+            tipo_material: 'bobina',
+            numero_serie: null,
+            id: null
+        };
+        
+        // ADICIONAR NO INÍCIO (para manter ordem correta)
+        bobinasManuais.unshift(novaBobina);
+        materiaisPorCategoria['bobinas'] = bobinasManuais;
+        
+        const tabsContent = document.getElementById('tab-bobinas');
+        if (tabsContent) {
+            tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
+            atualizarContadorBobinas();
             
-            if (!justificativa) {
-                checkbox.checked = false;
-                if (alertaDiv) {
-                    alertaDiv.style.display = 'block';
-                    setTimeout(() => { alertaDiv.style.display = 'none'; }, 3000);
-                }
-                if (justificativaInput) {
-                    justificativaInput.classList.add('input-error');
-                    justificativaInput.focus();
-                    setTimeout(() => justificativaInput.classList.remove('input-error'), 2000);
+            setTimeout(() => {
+                bobinasManuais.forEach((material, index) => {
+                    if (material.codigo) {
+                        buscarQuantidadeAnterior(material.codigo, `bobinas-${index}`, material.tombamento, 'bobina');
+                    }
+                    if (material._qtd) {
+                        const idUnico = `bobinas-${index}`;
+                        calcularDiferencaBobina(idUnico, material.codigo);
+                    }
+                });
+            }, 100);
+            
+            // Focar no primeiro item (o novo)
+            const primeiroItem = tabsContent.querySelector('.bobina-item:first-child');
+            if (primeiroItem) {
+                primeiroItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const novoCodigoInput = primeiroItem.querySelector('#bobina-codigo-0');
+                if (novoCodigoInput) {
+                    setTimeout(() => novoCodigoInput.focus(), 300);
                 }
             }
         }
     }
     
     // ============================================
-    // ADICIONAR TRAFO
+    // SALVAR DADOS ATUAIS DAS BOBINAS (CORRIGIDO)
+    // ============================================
+    
+    function salvarDadosBobinasAtuais() {
+        const bobinaItems = document.querySelectorAll('.bobina-item');
+        bobinaItems.forEach((item) => {
+            const index = parseInt(item.dataset.index);
+            if (isNaN(index) || index < 0 || index >= bobinasManuais.length) {
+                console.warn('⚠️ Índice inválido em salvarDadosBobinasAtuais:', item.dataset.index);
+                return;
+            }
+            
+            const codigo = document.getElementById(`bobina-codigo-${index}`)?.value || '';
+            const descricao = document.getElementById(`bobina-descricao-${index}`)?.value || '';
+            const und = document.getElementById(`bobina-und-${index}`)?.value || '';
+            const tombamento = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
+            const cor = document.getElementById(`bobina-cor-${index}`)?.value || '';
+            const oleo = document.getElementById(`bobina-oleo-${index}`)?.value || '';
+            const qtd = document.getElementById(`qtd-bobinas-${index}`)?.value || '';
+            const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
+            
+            bobinasManuais[index].codigo = codigo;
+            bobinasManuais[index].descricao = descricao;
+            bobinasManuais[index].und = und;
+            bobinasManuais[index].tombamento = tombamento;
+            bobinasManuais[index].cor = cor;
+            bobinasManuais[index].oleo = oleo;
+            bobinasManuais[index]._qtd = qtd;
+            bobinasManuais[index]._n_obra = nObra;
+            bobinasManuais[index].tipo_material = 'bobina';
+            bobinasManuais[index].id = item.dataset.id || null;
+        });
+    }
+    
+    // ============================================
+    // SALVAR DADOS ATUAIS DOS TRAFOS (CORRIGIDO)
+    // ============================================
+    
+    function salvarDadosTrafosAtuais() {
+        const trafoItems = document.querySelectorAll('.trafo-item');
+        trafoItems.forEach((item) => {
+            const index = parseInt(item.dataset.index);
+            if (isNaN(index) || index < 0 || index >= materiaisManuais.length) {
+                console.warn('⚠️ Índice inválido em salvarDadosTrafosAtuais:', item.dataset.index);
+                return;
+            }
+            
+            const codigo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
+            const descricao = document.getElementById(`trafo-descricao-${index}`)?.value || '';
+            const und = document.getElementById(`trafo-und-${index}`)?.value || '';
+            const serie = document.getElementById(`trafo-serie-${index}`)?.value || '';
+            const tombamento = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
+            const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
+            const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
+            const qtd = document.getElementById(`qtd-trafos-${index}`)?.value || '';
+            const nObra = document.getElementById(`n-obra-trafos-${index}`)?.value || '';
+            
+            materiaisManuais[index].codigo = codigo;
+            materiaisManuais[index].descricao = descricao;
+            materiaisManuais[index].und = und;
+            materiaisManuais[index].numero_serie = serie;
+            materiaisManuais[index].tombamento = tombamento;
+            materiaisManuais[index].oleo = oleo;
+            materiaisManuais[index].cor = cor;
+            materiaisManuais[index]._qtd = qtd;
+            materiaisManuais[index]._n_obra = nObra;
+            materiaisManuais[index].tipo_material = 'trafo';
+            materiaisManuais[index].id = item.dataset.id || null;
+        });
+    }
+    
+    // ============================================
+    // REMOVER BOBINA
+    // ============================================
+    
+    function removerBobina(index) {
+        const bobina = bobinasManuais[index];
+        const codigo = bobina?.codigo || '';
+        
+        if (codigo && codigoExisteNoBanco(codigo)) {
+            mostrarMensagem('❌ Esta bobina já está registrada no banco de dados e não pode ser removida. Use a opção "Dar baixa" para desativá-la.', 'erro');
+            return;
+        }
+        
+        if (confirm('Tem certeza que deseja remover esta bobina? Esta ação não pode ser desfeita.')) {
+            bobinasManuais.splice(index, 1);
+            materiaisPorCategoria['bobinas'] = bobinasManuais;
+            
+            const tabsContent = document.getElementById('tab-bobinas');
+            tabsContent.innerHTML = renderizarBobinas(bobinasManuais);
+            atualizarContadorBobinas();
+            
+            mostrarMensagem('✅ Bobina removida com sucesso!', 'sucesso');
+        }
+    }
+    
+    // ============================================
+    // ADICIONAR TRAFO (CORRIGIDO - ORDEM)
     // ============================================
     
     function adicionarTrafo() {
@@ -1321,12 +1579,13 @@ if (document.getElementById('contagemForm')) {
             ativo: true,
             isNew: true,
             _qtd: '',
-            _justificativa: '',
+            _n_obra: '',
             tipo_material: 'trafo',
             id: null
         };
         
-        materiaisManuais.push(novoTrafo);
+        // ADICIONAR NO INÍCIO (para manter ordem correta)
+        materiaisManuais.unshift(novoTrafo);
         materiaisPorCategoria['trafos'] = materiaisManuais;
         
         const tabsContent = document.getElementById('tab-trafos');
@@ -1346,10 +1605,10 @@ if (document.getElementById('contagemForm')) {
                 });
             }, 100);
             
-            const ultimoItem = tabsContent.querySelector('.trafo-item:last-child');
-            if (ultimoItem) {
-                ultimoItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                const novoCodigoInput = ultimoItem.querySelector('#trafo-codigo-' + (materiaisManuais.length - 1));
+            const primeiroItem = tabsContent.querySelector('.trafo-item:first-child');
+            if (primeiroItem) {
+                primeiroItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const novoCodigoInput = primeiroItem.querySelector('#trafo-codigo-0');
                 if (novoCodigoInput) {
                     setTimeout(() => novoCodigoInput.focus(), 300);
                 }
@@ -1385,6 +1644,16 @@ if (document.getElementById('contagemForm')) {
                 return t.ativo !== false && t.tipo_material === 'trafo';
             });
             btnTrafo.textContent = ativos.length;
+        }
+    }
+    
+    function atualizarContadorBobinas() {
+        const btnBobina = document.querySelector('.tab-btn[data-categoria="bobinas"] .tab-contador');
+        if (btnBobina) {
+            const ativas = bobinasManuais.filter(b => {
+                return b.ativo !== false && b.tipo_material === 'bobina';
+            });
+            btnBobina.textContent = ativas.length;
         }
     }
     
@@ -1736,6 +2005,25 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
+        // Validar concretos
+        const concretoItems = document.querySelectorAll('.concreto-item');
+        let concretoInvalido = false;
+        concretoItems.forEach((item) => {
+            const idUnico = item.dataset.codigo;
+            const diferencaDiv = document.getElementById(`diferenca-concretos-${item.dataset.index}`);
+            if (diferencaDiv && diferencaDiv.classList.contains('diferenca-erro')) {
+                concretoInvalido = true;
+                item.style.borderColor = '#FC8181';
+                item.style.borderWidth = '2px';
+                item.style.borderStyle = 'solid';
+            }
+        });
+        
+        if (concretoInvalido) {
+            mostrarMensagem('❌ Verifique as entradas de concreto: o total não bate com a diferença da contagem!', 'erro');
+            return;
+        }
+        
         const materiaisParaEnviar = [];
         const materiaisParaDesativar = [];
         const inputsQtd = document.querySelectorAll('.input-qtd');
@@ -1751,8 +2039,12 @@ if (document.getElementById('contagemForm')) {
                 const idRegistro = materialItem.dataset.id || null;
                 const tombamento = materialItem.dataset.tombamento || '';
                 
-                const justificativaInput = materialItem.querySelector('.input-justificativa');
-                const justificativa = justificativaInput ? justificativaInput.value : '';
+                // Buscar N Obra
+                let nObra = '';
+                const nObraInput = materialItem.querySelector('.input-justificativa');
+                if (nObraInput) {
+                    nObra = nObraInput.value || '';
+                }
                 
                 let darBaixa = false;
                 if (categoria === 'trafos') {
@@ -1769,7 +2061,7 @@ if (document.getElementById('contagemForm')) {
                     console.log(`🔴 Desativando registro ID: ${idRegistro} (${tipoMaterial}) - Tombamento: ${tombamento}`);
                     materiaisParaDesativar.push({
                         id: parseInt(idRegistro),
-                        obs: justificativa || `Baixa realizada por ${nome}`,
+                        obs: nObra || `Baixa realizada por ${nome}`,
                         tipo_material: tipoMaterial
                     });
                     return;
@@ -1827,7 +2119,7 @@ if (document.getElementById('contagemForm')) {
                         tombamento: tombamentoTrafo,
                         oleo: oleo,
                         cor: cor,
-                        obs: justificativa || `Contagem diária - ${nome}`,
+                        n_obra: nObra || `Contagem diária - ${nome}`,
                         ativo: 1,
                         tipo_material: 'trafo'
                     });
@@ -1843,6 +2135,8 @@ if (document.getElementById('contagemForm')) {
                     const descricaoBobina = document.getElementById(`bobina-descricao-${index}`)?.value || '';
                     const undBobina = document.getElementById(`bobina-und-${index}`)?.value || '';
                     const tombamentoBobina = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
+                    const corBobina = document.getElementById(`bobina-cor-${index}`)?.value || '';
+                    const oleoBobina = document.getElementById(`bobina-oleo-${index}`)?.value || '';
                     
                     const validacao = validarCodigoPorCategoria(codigoBobina, 'bobinas');
                     if (!validacao.valido) {
@@ -1878,14 +2172,34 @@ if (document.getElementById('contagemForm')) {
                         qtd: qtd,
                         numero_serie: null,
                         tombamento: tombamentoBobina,
-                        oleo: null,
-                        cor: null,
-                        obs: justificativa || `Contagem diária - ${nome}`,
+                        oleo: oleoBobina,
+                        cor: corBobina,
+                        n_obra: nObra || `Contagem diária - ${nome}`,
                         ativo: 1,
                         tipo_material: 'bobina'
                     });
                     
-                } else {
+                } else if (categoria === 'concretos') {
+                    const index = parseInt(materialItem.dataset.index);
+                    const idUnico = `${categoria}-${index}`;
+                    
+                    // Coletar entradas de concreto
+                    const entradas = [];
+                    const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
+                    entradaItems.forEach(entradaItem => {
+                        const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
+                        const valor = entradaItem.querySelector('.concreto-entrada-valor')?.value || '';
+                        const qtdEntrada = parseFloat(entradaItem.querySelector('.concreto-entrada-qtd')?.value) || 0;
+                        
+                        if (valor && qtdEntrada !== 0) {
+                            entradas.push({
+                                tipo: tipo,
+                                valor: valor,
+                                qtd: qtdEntrada
+                            });
+                        }
+                    });
+                    
                     const materiaisDaCategoria = materiaisPorCategoria[categoria] || [];
                     const material = materiaisDaCategoria.find(m => m.codigo === codigo);
                     
@@ -1900,9 +2214,10 @@ if (document.getElementById('contagemForm')) {
                             tombamento: null,
                             oleo: null,
                             cor: null,
-                            obs: justificativa || `Contagem diária - ${nome}`,
+                            n_obra: '',
                             ativo: 1,
-                            tipo_material: 'concreto'
+                            tipo_material: 'concreto',
+                            entradas_concreto: entradas
                         });
                     }
                 }
@@ -2028,6 +2343,7 @@ if (document.getElementById('contagemForm')) {
     window.calcularDiferenca = calcularDiferenca;
     window.calcularDiferencaBobina = calcularDiferencaBobina;
     window.calcularDiferencaTrafo = calcularDiferencaTrafo;
+    window.calcularDiferencaConcreto = calcularDiferencaConcreto;
     window.buscarQuantidadeAnterior = buscarQuantidadeAnterior;
     window.formatarData = formatarData;
     window.mostrarMensagem = mostrarMensagem;
@@ -2039,7 +2355,11 @@ if (document.getElementById('contagemForm')) {
     window.removerBobina = removerBobina;
     window.toggleBaixaTrafo = toggleBaixaTrafo;
     window.toggleBaixaBobina = toggleBaixaBobina;
-    window.verificarJustificativaTrafo = verificarJustificativaTrafo;
-    window.verificarJustificativaBobina = verificarJustificativaBobina;
+    window.verificarNObraTrafo = verificarNObraTrafo;
+    window.verificarNObraBobina = verificarNObraBobina;
+    window.adicionarEntradaConcreto = adicionarEntradaConcreto;
+    window.toggleConcretoEntradaFields = toggleConcretoEntradaFields;
+    window.removerEntradaConcreto = removerEntradaConcreto;
+    window.validarConcretoEntrada = validarConcretoEntrada;
     window.redirecionarParaHome = redirecionarParaHome;
 }
