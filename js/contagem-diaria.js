@@ -502,7 +502,6 @@ if (document.getElementById('contagemForm')) {
         
         categoriaAtiva = categoria;
         
-        // Aplicar filtro após trocar de aba
         setTimeout(() => {
             if (typeof aplicarFiltro === 'function') {
                 aplicarFiltro();
@@ -2095,6 +2094,47 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
+    // FUNÇÕES DE NAVEGAÇÃO - TOPO E FIM
+    // ============================================
+
+    function irParaTopo() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+
+    function irParaFim() {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+
+    function controlarBotoesNavegacao() {
+        const btnTopo = document.getElementById('btnTopo');
+        const btnFim = document.getElementById('btnFim');
+        
+        if (!btnTopo || !btnFim) return;
+        
+        const scrollY = window.scrollY;
+        const alturaTotal = document.body.scrollHeight;
+        const alturaVisivel = window.innerHeight;
+        
+        if (scrollY > 200) {
+            btnTopo.classList.add('visivel');
+        } else {
+            btnTopo.classList.remove('visivel');
+        }
+        
+        if (scrollY + alturaVisivel < alturaTotal - 100) {
+            btnFim.classList.add('visivel');
+        } else {
+            btnFim.classList.remove('visivel');
+        }
+    }
+    
+    // ============================================
     // ENVIAR FORMULÁRIO - CORRIGIDO (SALVA APENAS MODIFICADOS)
     // ============================================
     
@@ -2581,6 +2621,9 @@ if (document.getElementById('contagemForm')) {
     window.redirecionarParaHome = redirecionarParaHome;
     window.aplicarFiltro = aplicarFiltro;
     window.limparFiltro = limparFiltro;
+    window.irParaTopo = irParaTopo;
+    window.irParaFim = irParaFim;
+    window.controlarBotoesNavegacao = controlarBotoesNavegacao;
     
     // ============================================
     // INICIALIZAR
@@ -2588,6 +2631,16 @@ if (document.getElementById('contagemForm')) {
     
     const usuarioCarregado = carregarDadosUsuarioSessao();
     carregarMateriais();
+    
+    // ============================================
+    // INICIALIZAR BOTÕES DE NAVEGAÇÃO
+    // ============================================
+    
+    window.addEventListener('scroll', controlarBotoesNavegacao);
+    window.addEventListener('load', function() {
+        setTimeout(controlarBotoesNavegacao, 500);
+    });
+    window.addEventListener('resize', controlarBotoesNavegacao);
     
     // ============================================
     // POP-UP DE DESCRIÇÃO
