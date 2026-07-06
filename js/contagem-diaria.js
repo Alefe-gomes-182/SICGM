@@ -85,6 +85,7 @@ if (document.getElementById('contagemForm')) {
     let dadosCarregados = false;
     let todosRegistrosDB = [];
     let registrosCarregados = false;
+    let itemsRegistrados = new Set(); // ✅ SET para rastrear itens já registrados
     
     // ============================================
     // PREENCHER DATA AUTOMATICAMENTE
@@ -119,6 +120,95 @@ if (document.getElementById('contagemForm')) {
     }
     
     window.redirecionarParaHome = redirecionarParaHome;
+    
+    // ============================================
+    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO
+    // ============================================
+    
+    function travarItemAposRegistro(itemElement) {
+        if (!itemElement) return;
+        
+        // Travar campo de quantidade
+        const qtdInput = itemElement.querySelector('.input-qtd');
+        if (qtdInput) {
+            qtdInput.setAttribute('readonly', 'readonly');
+            qtdInput.classList.add('input-locked');
+            qtdInput.style.backgroundColor = '#edf2f7';
+            qtdInput.style.cursor = 'not-allowed';
+        }
+        
+        // Travar campo de justificativa/N obra
+        const justificativaInput = itemElement.querySelector('.input-justificativa');
+        if (justificativaInput) {
+            justificativaInput.setAttribute('readonly', 'readonly');
+            justificativaInput.classList.add('input-locked');
+            justificativaInput.style.backgroundColor = '#edf2f7';
+            justificativaInput.style.cursor = 'not-allowed';
+        }
+        
+        // Travar campos extras (tombamento, série, etc)
+        const extraInputs = itemElement.querySelectorAll('.input-extra');
+        extraInputs.forEach(input => {
+            if (!input.classList.contains('input-locked')) {
+                input.setAttribute('readonly', 'readonly');
+                input.classList.add('input-locked');
+                input.style.backgroundColor = '#edf2f7';
+                input.style.cursor = 'not-allowed';
+            }
+        });
+        
+        // Travar selects
+        const selects = itemElement.querySelectorAll('select');
+        selects.forEach(select => {
+            select.setAttribute('disabled', 'disabled');
+            select.classList.add('input-locked');
+            select.style.backgroundColor = '#edf2f7';
+            select.style.cursor = 'not-allowed';
+        });
+        
+        // Travar checkboxes de baixa
+        const checkboxes = itemElement.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
+        checkboxes.forEach(cb => {
+            cb.setAttribute('disabled', 'disabled');
+            cb.style.cursor = 'not-allowed';
+        });
+        
+        // Adicionar classe visual de item registrado
+        itemElement.classList.add('item-registrado');
+        itemElement.style.borderColor = '#48BB78';
+        itemElement.style.borderWidth = '2px';
+        itemElement.style.borderStyle = 'solid';
+        
+        // Adicionar badge de "Registrado"
+        const header = itemElement.querySelector('.material-header');
+        if (header && !header.querySelector('.badge-registrado')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge-registrado';
+            badge.innerHTML = '✅ Registrado';
+            badge.style.cssText = `
+                background: #48BB78;
+                color: white;
+                padding: 2px 10px;
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+                margin-left: 10px;
+            `;
+            header.appendChild(badge);
+        }
+        
+        // Remover botão de remover se existir
+        const btnRemover = itemElement.querySelector('.btn-remover-trafo-x');
+        if (btnRemover) {
+            btnRemover.style.display = 'none';
+        }
+        
+        // Adicionar à lista de itens registrados
+        const id = itemElement.dataset.id || itemElement.dataset.codigo;
+        if (id) {
+            itemsRegistrados.add(id);
+        }
+    }
     
     // ============================================
     // CARREGAR DADOS DO USUÁRIO DA SESSÃO
@@ -302,7 +392,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CARREGAR TODOS OS REGISTROS DO D1 - CORRIGIDO
+    // CARREGAR TODOS OS REGISTROS DO D1
     // ============================================
     
     async function carregarTodosRegistros() {
@@ -336,7 +426,31 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CARREGAR ITENS MANUAIS DO D1 - CORRIGIDO
+    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO (MESMO CÓDIGO + TOMBAMENTO + ATIVO)
+    // ============================================
+    
+    function itemJaExisteNoBanco(codigo, tombamento, tipoMaterial) {
+        if (!codigo) return false;
+        
+        // Para concretos, verificar apenas código
+        if (tipoMaterial === 'concreto' || !tombamento) {
+            return todosRegistrosDB.some(r => 
+                r.codigo === codigo && 
+                r.ativo === 1 &&
+                (!r.tombamento || r.tombamento === '')
+            );
+        }
+        
+        // Para trafos e bobinas, verificar código + tombamento
+        return todosRegistrosDB.some(r => 
+            r.codigo === codigo && 
+            r.tombamento === tombamento && 
+            r.ativo === 1
+        );
+    }
+    
+    // ============================================
+    // CARREGAR ITENS MANUAIS DO D1
     // ============================================
     
     async function carregarItensManuais() {
@@ -373,7 +487,8 @@ if (document.getElementById('contagemForm')) {
                         _qtd: item.qtd || '',
                         _n_obra: item.obs || '',
                         _data: item.data || '',
-                        _created_at: item.created_at || ''
+                        _created_at: item.created_at || '',
+                        _jaRegistrado: true
                     });
                 }
                 else if (tipoMaterial === 'bobina' || 
@@ -396,7 +511,8 @@ if (document.getElementById('contagemForm')) {
                             _qtd: item.qtd || '',
                             _n_obra: item.obs || '',
                             _data: item.data || '',
-                            _created_at: item.created_at || ''
+                            _created_at: item.created_at || '',
+                            _jaRegistrado: true
                         });
                     }
                 }
@@ -538,9 +654,16 @@ if (document.getElementById('contagemForm')) {
         
         materiais.forEach((material, index) => {
             const idUnico = `${categoria}-${index}`;
+            const jaRegistrado = material._jaRegistrado || false;
             
             html += `
-                <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}" data-tombamento="">
+                <div class="material-item ${jaRegistrado ? 'item-registrado' : ''}" 
+                     data-codigo="${material.codigo}" 
+                     data-categoria="${categoria}" 
+                     data-tipo="${tipoMaterial}" 
+                     data-index="${index}" 
+                     data-tombamento=""
+                     data-ja-registrado="${jaRegistrado}">
                     <div class="material-row">
                         <div class="material-field">
                             <label>Código</label>
@@ -557,7 +680,9 @@ if (document.getElementById('contagemForm')) {
                         <div class="material-field">
                             <label for="qtd-${idUnico}">QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                class="input-qtd" onchange="calcularDiferenca('${idUnico}', '${material.codigo}')">
+                                class="input-qtd ${jaRegistrado ? 'input-locked' : ''}" 
+                                ${jaRegistrado ? 'readonly' : ''}
+                                onchange="calcularDiferenca('${idUnico}', '${material.codigo}')">
                         </div>
                         <div class="material-field">
                             <label>Últ. Cont.</label>
@@ -569,9 +694,12 @@ if (document.getElementById('contagemForm')) {
                     <div class="justificativa-row">
                         <div class="material-field justificativa-field">
                             <label for="justificativa-${idUnico}">Justificativa</label>
-                            <input type="text" id="justificativa-${idUnico}" placeholder="Justificativa..." class="input-justificativa">
+                            <input type="text" id="justificativa-${idUnico}" placeholder="Justificativa..." 
+                                class="input-justificativa ${jaRegistrado ? 'input-locked' : ''}"
+                                ${jaRegistrado ? 'readonly' : ''}>
                         </div>
                     </div>
+                    ${jaRegistrado ? '<div class="badge-registrado">✅ Registrado</div>' : ''}
                 </div>
             `;
         });
@@ -602,9 +730,16 @@ if (document.getElementById('contagemForm')) {
         
         materiais.forEach((material, index) => {
             const idUnico = `${categoria}-${index}`;
+            const jaRegistrado = material._jaRegistrado || false;
             
             html += `
-                <div class="material-item concreto-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}" data-tombamento="">
+                <div class="material-item concreto-item ${jaRegistrado ? 'item-registrado' : ''}" 
+                     data-codigo="${material.codigo}" 
+                     data-categoria="${categoria}" 
+                     data-tipo="${tipoMaterial}" 
+                     data-index="${index}" 
+                     data-tombamento=""
+                     data-ja-registrado="${jaRegistrado}">
                     <div class="material-row">
                         <div class="material-field">
                             <label>Código</label>
@@ -621,7 +756,9 @@ if (document.getElementById('contagemForm')) {
                         <div class="material-field">
                             <label for="qtd-${idUnico}">QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                class="input-qtd" onchange="calcularDiferencaConcreto('${idUnico}', '${material.codigo}')">
+                                class="input-qtd ${jaRegistrado ? 'input-locked' : ''}"
+                                ${jaRegistrado ? 'readonly' : ''}
+                                onchange="calcularDiferencaConcreto('${idUnico}', '${material.codigo}')">
                         </div>
                         <div class="material-field">
                             <label>Últ. Cont.</label>
@@ -644,6 +781,7 @@ if (document.getElementById('contagemForm')) {
                             Total: <span id="concreto-total-valor-${idUnico}">0.00</span>
                         </div>
                     </div>
+                    ${jaRegistrado ? '<div class="badge-registrado">✅ Registrado</div>' : ''}
                 </div>
             `;
         });
@@ -852,18 +990,22 @@ if (document.getElementById('contagemForm')) {
             const qtdSalva = material._qtd || '';
             const idRegistro = material.id || null;
             const idx = index;
+            const jaRegistrado = material._jaRegistrado || false;
             
-            const lockedClass = existeNoBanco ? 'input-locked' : '';
-            const itemBloqueado = existeNoBanco ? 'material-bloqueado' : '';
+            const lockedClass = (existeNoBanco || jaRegistrado) ? 'input-locked' : '';
+            const itemBloqueado = (existeNoBanco || jaRegistrado) ? 'material-bloqueado' : '';
+            const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
+            const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
             
             html += `
-                <div class="material-item bobina-item ${itemBloqueado}" 
+                <div class="material-item bobina-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''}" 
                      data-codigo="${codigoBobina}" 
                      data-categoria="bobinas" 
                      data-tipo="bobina" 
                      data-id="${idRegistro}" 
                      data-tombamento="${material.tombamento || ''}"
-                     data-index="${idx}">
+                     data-index="${idx}"
+                     data-ja-registrado="${jaRegistrado}">
                     <div class="material-header">
                         <span class="material-number">Bobina #${idx + 1}</span>
                         <div class="trafo-header-actions">
@@ -872,6 +1014,7 @@ if (document.getElementById('contagemForm')) {
                                 <input type="checkbox" 
                                     class="checkbox-baixa-bobina" 
                                     data-index="${idx}"
+                                    ${disabledAttr}
                                     onchange="toggleBaixaBobina(${idx}, this)">
                                 Dar baixa
                             </label>
@@ -884,6 +1027,7 @@ if (document.getElementById('contagemForm')) {
                                 ✕
                             </button>
                             `}
+                            ${jaRegistrado ? '<span class="badge-registrado" style="margin-left:10px;">✅ Registrado</span>' : ''}
                         </div>
                     </div>
                     
@@ -915,7 +1059,7 @@ if (document.getElementById('contagemForm')) {
                             <label>Tombamento *</label>
                             <input type="text" id="bobina-tombamento-${idx}" value="${material.tombamento || ''}" 
                                 placeholder="Tombamento" class="input-extra ${lockedClass}" 
-                                ${existeNoBanco ? 'readonly' : ''} required>
+                                ${readonlyAttr} required>
                         </div>
                     </div>
                     
@@ -923,7 +1067,8 @@ if (document.getElementById('contagemForm')) {
                         <div class="material-field">
                             <label>QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                class="input-qtd" value="${qtdSalva}" 
+                                class="input-qtd ${lockedClass}" value="${qtdSalva}" 
+                                ${readonlyAttr}
                                 onchange="calcularDiferencaBobina('${idUnico}', '${codigoBobina}')">
                         </div>
                         <div class="material-field">
@@ -941,7 +1086,8 @@ if (document.getElementById('contagemForm')) {
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
                                 placeholder="Número da obra..." 
-                                class="input-justificativa"
+                                class="input-justificativa ${lockedClass}"
+                                ${readonlyAttr}
                                 ${existeNoBanco ? `oninput="verificarNObraBobina(${idx})"` : ''}>
                         </div>
                     </div>
@@ -1014,18 +1160,22 @@ if (document.getElementById('contagemForm')) {
             const qtdSalva = material._qtd || '';
             const idRegistro = material.id || null;
             const idx = index;
+            const jaRegistrado = material._jaRegistrado || false;
             
-            const lockedClass = existeNoBanco ? 'input-locked' : '';
-            const itemBloqueado = existeNoBanco ? 'material-bloqueado' : '';
+            const lockedClass = (existeNoBanco || jaRegistrado) ? 'input-locked' : '';
+            const itemBloqueado = (existeNoBanco || jaRegistrado) ? 'material-bloqueado' : '';
+            const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
+            const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
             
             html += `
-                <div class="material-item trafo-item ${itemBloqueado}" 
+                <div class="material-item trafo-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''}" 
                      data-codigo="${codigoTrafo}" 
                      data-categoria="trafos" 
                      data-tipo="trafo" 
                      data-id="${idRegistro}" 
                      data-tombamento="${material.tombamento || ''}"
-                     data-index="${idx}">
+                     data-index="${idx}"
+                     data-ja-registrado="${jaRegistrado}">
                     <div class="material-header">
                         <span class="material-number">Trafo #${idx + 1}</span>
                         <div class="trafo-header-actions">
@@ -1034,6 +1184,7 @@ if (document.getElementById('contagemForm')) {
                                 <input type="checkbox" 
                                     class="checkbox-baixa-trafo" 
                                     data-index="${idx}"
+                                    ${disabledAttr}
                                     onchange="toggleBaixaTrafo(${idx}, this)">
                                 Dar baixa
                             </label>
@@ -1046,6 +1197,7 @@ if (document.getElementById('contagemForm')) {
                                 ✕
                             </button>
                             `}
+                            ${jaRegistrado ? '<span class="badge-registrado" style="margin-left:10px;">✅ Registrado</span>' : ''}
                         </div>
                     </div>
                     
@@ -1077,18 +1229,18 @@ if (document.getElementById('contagemForm')) {
                             <label>Nº Série *</label>
                             <input type="text" id="trafo-serie-${idx}" value="${material.numero_serie || ''}" 
                                 placeholder="Nº de série" class="input-extra ${lockedClass}" 
-                                ${existeNoBanco ? 'readonly' : ''} required>
+                                ${readonlyAttr} required>
                         </div>
                         <div class="material-field">
                             <label>Tombamento *</label>
                             <input type="text" id="trafo-tombamento-${idx}" value="${material.tombamento || ''}" 
                                 placeholder="Tombamento" class="input-extra ${lockedClass}" 
-                                ${existeNoBanco ? 'readonly' : ''} required>
+                                ${readonlyAttr} required>
                         </div>
                         <div class="material-field">
                             <label>Óleo *</label>
                             <select id="trafo-oleo-${idx}" class="input-extra ${lockedClass}" 
-                                ${existeNoBanco ? 'disabled' : ''} required>
+                                ${disabledAttr} required>
                                 <option value="">Selecione...</option>
                                 ${OLEOS.map(oleo => `<option value="${oleo}" ${material.oleo === oleo ? 'selected' : ''}>${oleo}</option>`).join('')}
                             </select>
@@ -1096,7 +1248,7 @@ if (document.getElementById('contagemForm')) {
                         <div class="material-field">
                             <label>Cor *</label>
                             <select id="trafo-cor-${idx}" class="input-extra ${lockedClass}" 
-                                ${existeNoBanco ? 'disabled' : ''} required>
+                                ${disabledAttr} required>
                                 <option value="">Selecione...</option>
                                 ${CORES.map(cor => `<option value="${cor}" ${material.cor === cor ? 'selected' : ''}>${cor}</option>`).join('')}
                             </select>
@@ -1107,7 +1259,8 @@ if (document.getElementById('contagemForm')) {
                         <div class="material-field">
                             <label>QTD *</label>
                             <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
-                                class="input-qtd" value="${qtdSalva}" 
+                                class="input-qtd ${lockedClass}" value="${qtdSalva}" 
+                                ${readonlyAttr}
                                 onchange="calcularDiferencaTrafo('${idUnico}', '${codigoTrafo}')">
                         </div>
                         <div class="material-field">
@@ -1125,7 +1278,8 @@ if (document.getElementById('contagemForm')) {
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
                                 placeholder="Número da obra..." 
-                                class="input-justificativa"
+                                class="input-justificativa ${lockedClass}"
+                                ${readonlyAttr}
                                 ${existeNoBanco ? `oninput="verificarNObraTrafo(${idx})"` : ''}>
                         </div>
                     </div>
@@ -1455,7 +1609,8 @@ if (document.getElementById('contagemForm')) {
             numero_serie: null,
             oleo: null,
             cor: null,
-            id: null
+            id: null,
+            _jaRegistrado: false
         };
         
         bobinasManuais.unshift(novaBobina);
@@ -1602,7 +1757,8 @@ if (document.getElementById('contagemForm')) {
             _qtd: '',
             _n_obra: '',
             tipo_material: 'trafo',
-            id: null
+            id: null,
+            _jaRegistrado: false
         };
         
         materiaisManuais.unshift(novoTrafo);
@@ -2135,7 +2291,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ENVIAR FORMULÁRIO - CORRIGIDO (SALVA APENAS MODIFICADOS)
+    // ENVIAR FORMULÁRIO - CORRIGIDO
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
@@ -2166,6 +2322,11 @@ if (document.getElementById('contagemForm')) {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
             
+            // ✅ VERIFICAR SE JÁ ESTÁ REGISTRADO
+            if (item.dataset.jaRegistrado === 'true') {
+                return; // Pular itens já registrados
+            }
+            
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             const qtd = parseFloat(qtdInput?.value) || 0;
             
@@ -2190,6 +2351,11 @@ if (document.getElementById('contagemForm')) {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
             
+            // ✅ VERIFICAR SE JÁ ESTÁ REGISTRADO
+            if (item.dataset.jaRegistrado === 'true') {
+                return; // Pular itens já registrados
+            }
+            
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             const qtd = parseFloat(qtdInput?.value) || 0;
             
@@ -2211,6 +2377,11 @@ if (document.getElementById('contagemForm')) {
         const concretoItems = document.querySelectorAll('.concreto-item');
         let concretoInvalido = false;
         concretoItems.forEach((item) => {
+            // ✅ VERIFICAR SE JÁ ESTÁ REGISTRADO
+            if (item.dataset.jaRegistrado === 'true') {
+                return; // Pular itens já registrados
+            }
+            
             const diferencaDiv = document.getElementById(`diferenca-concretos-${item.dataset.index}`);
             if (diferencaDiv && diferencaDiv.classList.contains('diferenca-erro')) {
                 concretoInvalido = true;
@@ -2226,18 +2397,24 @@ if (document.getElementById('contagemForm')) {
         }
         
         // ============================================
-        // IDENTIFICAR APENAS ITENS MODIFICADOS
+        // IDENTIFICAR APENAS ITENS MODIFICADOS E NÃO REGISTRADOS
         // ============================================
         
         const materiaisParaEnviar = [];
         const materiaisParaDesativar = [];
         let temErroValidacao = false;
+        let temDuplicata = false;
         
         function itemFoiModificado(inputQtd, item) {
             const qtdAtual = parseFloat(inputQtd.value) || 0;
             const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
             const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
             const idRegistro = item.dataset.id || null;
+            
+            // ✅ Se já está registrado, NÃO enviar
+            if (item.dataset.jaRegistrado === 'true') {
+                return false;
+            }
             
             if (idRegistro && idRegistro !== 'null' && qtdAtual === qtdAnterior) {
                 return false;
@@ -2250,10 +2427,36 @@ if (document.getElementById('contagemForm')) {
             return true;
         }
         
-        // TRAFOS MODIFICADOS
+        // ✅ FUNÇÃO PARA VERIFICAR DUPLICATA
+        function verificarDuplicata(codigo, tombamento, tipoMaterial) {
+            if (!codigo) return false;
+            
+            // Para concretos, verificar apenas código
+            if (tipoMaterial === 'concreto' || !tombamento) {
+                return todosRegistrosDB.some(r => 
+                    r.codigo === codigo && 
+                    r.ativo === 1 &&
+                    (!r.tombamento || r.tombamento === '') &&
+                    r.tipo_material === tipoMaterial
+                );
+            }
+            
+            // Para trafos e bobinas, verificar código + tombamento
+            return todosRegistrosDB.some(r => 
+                r.codigo === codigo && 
+                r.tombamento === tombamento && 
+                r.ativo === 1 &&
+                r.tipo_material === tipoMaterial
+            );
+        }
+        
+        // TRAFOS
         trafoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
+            
+            // ✅ Pular se já registrado
+            if (item.dataset.jaRegistrado === 'true') return;
             
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             if (!qtdInput) return;
@@ -2280,10 +2483,21 @@ if (document.getElementById('contagemForm')) {
             }
             
             const codigoTrafo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
+            const tombamentoTrafo = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
+            
+            // ✅ VERIFICAR DUPLICATA
+            if (verificarDuplicata(codigoTrafo, tombamentoTrafo, 'trafo')) {
+                temDuplicata = true;
+                mostrarToast(`❌ Trafo #${index + 1} (${codigoTrafo} - ${tombamentoTrafo}) já está registrado no banco!`, 'erro');
+                item.style.borderColor = '#FC8181';
+                item.style.borderWidth = '3px';
+                item.style.borderStyle = 'solid';
+                return;
+            }
+            
             const descricaoTrafo = document.getElementById(`trafo-descricao-${index}`)?.value || '';
             const undTrafo = document.getElementById(`trafo-und-${index}`)?.value || '';
             const serie = document.getElementById(`trafo-serie-${index}`)?.value || '';
-            const tombamentoTrafo = document.getElementById(`trafo-tombamento-${index}`)?.value || '';
             const oleo = document.getElementById(`trafo-oleo-${index}`)?.value || '';
             const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
             const nObra = document.getElementById(`n-obra-trafos-${index}`)?.value || '';
@@ -2330,10 +2544,13 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // BOBINAS MODIFICADAS
+        // BOBINAS
         bobinaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
+            
+            // ✅ Pular se já registrado
+            if (item.dataset.jaRegistrado === 'true') return;
             
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             if (!qtdInput) return;
@@ -2360,9 +2577,20 @@ if (document.getElementById('contagemForm')) {
             }
             
             const codigoBobina = document.getElementById(`bobina-codigo-${index}`)?.value || '';
+            const tombamentoBobina = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
+            
+            // ✅ VERIFICAR DUPLICATA
+            if (verificarDuplicata(codigoBobina, tombamentoBobina, 'bobina')) {
+                temDuplicata = true;
+                mostrarToast(`❌ Bobina #${index + 1} (${codigoBobina} - ${tombamentoBobina}) já está registrada no banco!`, 'erro');
+                item.style.borderColor = '#FC8181';
+                item.style.borderWidth = '3px';
+                item.style.borderStyle = 'solid';
+                return;
+            }
+            
             const descricaoBobina = document.getElementById(`bobina-descricao-${index}`)?.value || '';
             const undBobina = document.getElementById(`bobina-und-${index}`)?.value || '';
-            const tombamentoBobina = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
             const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
             
             const validacao = validarCodigoPorCategoria(codigoBobina, 'bobinas');
@@ -2407,10 +2635,13 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // CONCRETOS MODIFICADOS
+        // CONCRETOS
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
+            
+            // ✅ Pular se já registrado
+            if (item.dataset.jaRegistrado === 'true') return;
             
             const idUnico = `concretos-${index}`;
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
@@ -2422,6 +2653,16 @@ if (document.getElementById('contagemForm')) {
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
+            
+            // ✅ VERIFICAR DUPLICATA PARA CONCRETO
+            if (verificarDuplicata(codigo, '', 'concreto')) {
+                temDuplicata = true;
+                mostrarToast(`❌ Concreto ${codigo} já está registrado no banco!`, 'erro');
+                item.style.borderColor = '#FC8181';
+                item.style.borderWidth = '3px';
+                item.style.borderStyle = 'solid';
+                return;
+            }
             
             const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
             if (temContagemAnterior) {
@@ -2480,7 +2721,10 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
-        if (temErroValidacao) {
+        if (temErroValidacao || temDuplicata) {
+            if (temDuplicata) {
+                mostrarToast('❌ Um ou mais itens já estão registrados no banco! Verifique os itens destacados.', 'erro');
+            }
             return;
         }
         
@@ -2501,7 +2745,7 @@ if (document.getElementById('contagemForm')) {
             let totalDesativados = 0;
             
             if (materiaisParaEnviar.length > 0) {
-                mostrarToast(`⏳ Salvando ${materiaisParaEnviar.length} item(ns) modificado(s)...`, 'info');
+                mostrarToast(`⏳ Salvando ${materiaisParaEnviar.length} item(ns)...`, 'info');
             }
             
             if (materiaisParaDesativar.length > 0) {
@@ -2543,6 +2787,12 @@ if (document.getElementById('contagemForm')) {
                         if (response.ok) {
                             totalProcessados++;
                             console.log(`✅ ${material.tipo_material} ${material.codigo} salvo com sucesso`);
+                            
+                            // ✅ TRAVAR O ITEM NA INTERFACE APÓS SALVAR
+                            const itemElement = document.querySelector(`.${material.tipo_material}-item[data-codigo="${material.codigo}"][data-tombamento="${material.tombamento || ''}"]`);
+                            if (itemElement) {
+                                travarItemAposRegistro(itemElement);
+                            }
                         } else {
                             console.error(`❌ Erro ao salvar ${material.codigo}:`, await response.text());
                         }
@@ -2554,9 +2804,9 @@ if (document.getElementById('contagemForm')) {
             
             let msg = '';
             if (totalProcessados > 0 && totalDesativados > 0) {
-                msg = `✅ ${totalProcessados} item(ns) atualizado(s) e ${totalDesativados} baixa(s) realizada(s)!`;
+                msg = `✅ ${totalProcessados} item(ns) registrado(s) e ${totalDesativados} baixa(s) realizada(s)!`;
             } else if (totalProcessados > 0) {
-                msg = `✅ ${totalProcessados} item(ns) atualizado(s) com sucesso!`;
+                msg = `✅ ${totalProcessados} item(ns) registrado(s) com sucesso!`;
             } else if (totalDesativados > 0) {
                 msg = `✅ ${totalDesativados} baixa(s) realizada(s) com sucesso!`;
             }
@@ -2624,6 +2874,7 @@ if (document.getElementById('contagemForm')) {
     window.irParaTopo = irParaTopo;
     window.irParaFim = irParaFim;
     window.controlarBotoesNavegacao = controlarBotoesNavegacao;
+    window.travarItemAposRegistro = travarItemAposRegistro;
     
     // ============================================
     // INICIALIZAR
