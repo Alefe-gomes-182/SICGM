@@ -60,6 +60,33 @@
                 <div class="materiais-section">
                     <h2 class="section-title">Materiais</h2>
                     
+                    <!-- FILTRO DE PESQUISA -->
+                    <div class="filtro-container">
+                        <div class="filtro-row">
+                            <div class="filtro-input-group">
+                                <label for="filtro-texto">🔍 Pesquisar</label>
+                                <input type="text" id="filtro-texto" placeholder="Digite para pesquisar..." oninput="aplicarFiltro()">
+                            </div>
+                            <div class="filtro-select-group">
+                                <label for="filtro-tipo">Filtrar por</label>
+                                <select id="filtro-tipo" onchange="aplicarFiltro()">
+                                    <option value="codigo">Código</option>
+                                    <option value="descricao">Descrição</option>
+                                    <option value="tombamento">Tombamento</option>
+                                    <option value="todos">Todos os campos</option>
+                                </select>
+                            </div>
+                            <div class="filtro-clear-group">
+                                <button type="button" class="btn-limpar-filtro" onclick="limparFiltro()">
+                                    ✕ Limpar
+                                </button>
+                            </div>
+                        </div>
+                        <div id="filtro-resultado" class="filtro-resultado">
+                            <span id="filtro-contagem">Mostrando 0 itens</span>
+                        </div>
+                    </div>
+                    
                     <!-- Sistema de Abas -->
                     <div class="tabs-container">
                         <div class="tabs-nav" id="tabs-nav"></div>

@@ -501,6 +501,13 @@ if (document.getElementById('contagemForm')) {
         if (contentAtivo) contentAtivo.classList.add('active');
         
         categoriaAtiva = categoria;
+        
+        // Aplicar filtro após trocar de aba
+        setTimeout(() => {
+            if (typeof aplicarFiltro === 'function') {
+                aplicarFiltro();
+            }
+        }, 100);
     }
     
     // ============================================
@@ -534,7 +541,7 @@ if (document.getElementById('contagemForm')) {
             const idUnico = `${categoria}-${index}`;
             
             html += `
-                <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}">
+                <div class="material-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}" data-tombamento="">
                     <div class="material-row">
                         <div class="material-field">
                             <label>Código</label>
@@ -598,7 +605,7 @@ if (document.getElementById('contagemForm')) {
             const idUnico = `${categoria}-${index}`;
             
             html += `
-                <div class="material-item concreto-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}">
+                <div class="material-item concreto-item" data-codigo="${material.codigo}" data-categoria="${categoria}" data-tipo="${tipoMaterial}" data-index="${index}" data-tombamento="">
                     <div class="material-row">
                         <div class="material-field">
                             <label>Código</label>
@@ -2028,6 +2035,66 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
+    // FUNÇÕES DE FILTRO DE PESQUISA
+    // ============================================
+
+    function aplicarFiltro() {
+        const texto = document.getElementById('filtro-texto').value.toLowerCase().trim();
+        const tipo = document.getElementById('filtro-tipo').value;
+        const items = document.querySelectorAll('.material-item');
+        let visiveis = 0;
+        
+        if (!texto) {
+            items.forEach(item => {
+                item.classList.remove('filtro-oculto');
+                visiveis++;
+            });
+            document.getElementById('filtro-contagem').textContent = `Mostrando ${visiveis} itens`;
+            return;
+        }
+        
+        items.forEach(item => {
+            let textoBusca = '';
+            const codigo = item.dataset.codigo || '';
+            const descricaoInput = item.querySelector('.input-descricao');
+            const descricao = descricaoInput ? descricaoInput.value.toLowerCase() : '';
+            const tombamento = item.dataset.tombamento || '';
+            
+            switch(tipo) {
+                case 'codigo':
+                    textoBusca = codigo.toLowerCase();
+                    break;
+                case 'descricao':
+                    textoBusca = descricao.toLowerCase();
+                    break;
+                case 'tombamento':
+                    textoBusca = tombamento.toLowerCase();
+                    break;
+                case 'todos':
+                default:
+                    textoBusca = `${codigo} ${descricao} ${tombamento}`.toLowerCase();
+                    break;
+            }
+            
+            if (textoBusca.includes(texto)) {
+                item.classList.remove('filtro-oculto');
+                visiveis++;
+            } else {
+                item.classList.add('filtro-oculto');
+            }
+        });
+        
+        document.getElementById('filtro-contagem').textContent = `Mostrando ${visiveis} itens`;
+    }
+
+    function limparFiltro() {
+        document.getElementById('filtro-texto').value = '';
+        document.getElementById('filtro-tipo').value = 'todos';
+        aplicarFiltro();
+        document.getElementById('filtro-texto').focus();
+    }
+    
+    // ============================================
     // ENVIAR FORMULÁRIO - CORRIGIDO (SALVA APENAS MODIFICADOS)
     // ============================================
     
@@ -2126,28 +2193,24 @@ if (document.getElementById('contagemForm')) {
         const materiaisParaDesativar = [];
         let temErroValidacao = false;
         
-        // ✅ FUNÇÃO PARA VERIFICAR SE UM ITEM FOI MODIFICADO
         function itemFoiModificado(inputQtd, item) {
             const qtdAtual = parseFloat(inputQtd.value) || 0;
             const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
             const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
             const idRegistro = item.dataset.id || null;
             
-            // ✅ Se o item tem ID no banco E a quantidade não mudou, NÃO enviar
             if (idRegistro && idRegistro !== 'null' && qtdAtual === qtdAnterior) {
                 return false;
             }
             
-            // ✅ Se a quantidade é 0, NÃO enviar
             if (qtdAtual === 0) {
                 return false;
             }
             
-            // ✅ Se não tem ID no banco (item novo) OU quantidade mudou, enviar
             return true;
         }
         
-        // ✅ VERIFICAR TRAFOS MODIFICADOS
+        // TRAFOS MODIFICADOS
         trafoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2158,12 +2221,10 @@ if (document.getElementById('contagemForm')) {
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const idRegistro = item.dataset.id || null;
             
-            // ✅ VERIFICAR SE FOI MODIFICADO
             if (!itemFoiModificado(qtdInput, item)) {
-                return; // Pular este item
+                return;
             }
             
-            // ✅ VERIFICAR SE É "DAR BAIXA"
             const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo');
             const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
             
@@ -2178,7 +2239,6 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            // ✅ COLETAR DADOS DO TRAFO
             const codigoTrafo = document.getElementById(`trafo-codigo-${index}`)?.value || '';
             const descricaoTrafo = document.getElementById(`trafo-descricao-${index}`)?.value || '';
             const undTrafo = document.getElementById(`trafo-und-${index}`)?.value || '';
@@ -2188,7 +2248,6 @@ if (document.getElementById('contagemForm')) {
             const cor = document.getElementById(`trafo-cor-${index}`)?.value || '';
             const nObra = document.getElementById(`n-obra-trafos-${index}`)?.value || '';
             
-            // ✅ VALIDAR CÓDIGO
             const validacao = validarCodigoPorCategoria(codigoTrafo, 'trafos');
             if (!validacao.valido) {
                 mostrarToast('❌ Trafo #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
@@ -2231,7 +2290,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // ✅ VERIFICAR BOBINAS MODIFICADAS
+        // BOBINAS MODIFICADAS
         bobinaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2242,12 +2301,10 @@ if (document.getElementById('contagemForm')) {
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const idRegistro = item.dataset.id || null;
             
-            // ✅ VERIFICAR SE FOI MODIFICADO
             if (!itemFoiModificado(qtdInput, item)) {
-                return; // Pular este item
+                return;
             }
             
-            // ✅ VERIFICAR SE É "DAR BAIXA"
             const checkboxBaixa = item.querySelector('.checkbox-baixa-bobina');
             const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
             
@@ -2262,14 +2319,12 @@ if (document.getElementById('contagemForm')) {
                 return;
             }
             
-            // ✅ COLETAR DADOS DA BOBINA
             const codigoBobina = document.getElementById(`bobina-codigo-${index}`)?.value || '';
             const descricaoBobina = document.getElementById(`bobina-descricao-${index}`)?.value || '';
             const undBobina = document.getElementById(`bobina-und-${index}`)?.value || '';
             const tombamentoBobina = document.getElementById(`bobina-tombamento-${index}`)?.value || '';
             const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
             
-            // ✅ VALIDAR CÓDIGO
             const validacao = validarCodigoPorCategoria(codigoBobina, 'bobinas');
             if (!validacao.valido) {
                 mostrarToast('❌ Bobina #' + (parseInt(index) + 1) + ': ' + validacao.motivo, 'erro');
@@ -2312,7 +2367,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // ✅ VERIFICAR CONCRETOS MODIFICADOS
+        // CONCRETOS MODIFICADOS
         concretoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2321,15 +2376,13 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
             if (!qtdInput) return;
             
-            // ✅ VERIFICAR SE FOI MODIFICADO
             if (!itemFoiModificado(qtdInput, item)) {
-                return; // Pular este item
+                return;
             }
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
             
-            // ✅ VERIFICAR JUSTIFICATIVA
             const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
             if (temContagemAnterior) {
                 const justificativa = document.getElementById(`justificativa-${idUnico}`)?.value || '';
@@ -2347,7 +2400,6 @@ if (document.getElementById('contagemForm')) {
                 }
             }
             
-            // ✅ COLETAR ENTRADAS DE CONCRETO
             const entradas = [];
             const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             entradaItems.forEach(entradaItem => {
@@ -2392,7 +2444,6 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // ✅ VERIFICAR SE HÁ ITENS PARA ENVIAR
         if (materiaisParaEnviar.length === 0 && materiaisParaDesativar.length === 0) {
             mostrarToast('ℹ️ Nenhum item foi modificado. Nada para salvar.', 'info');
             return;
@@ -2409,12 +2460,10 @@ if (document.getElementById('contagemForm')) {
             let totalProcessados = 0;
             let totalDesativados = 0;
             
-            // ✅ MOSTRAR QUANTOS ITENS SERÃO SALVOS
             if (materiaisParaEnviar.length > 0) {
                 mostrarToast(`⏳ Salvando ${materiaisParaEnviar.length} item(ns) modificado(s)...`, 'info');
             }
             
-            // ✅ DESATIVAR ITENS (BAIXA)
             if (materiaisParaDesativar.length > 0) {
                 mostrarToast(`⏳ Desativando ${materiaisParaDesativar.length} item(ns)...`, 'info');
                 
@@ -2442,7 +2491,6 @@ if (document.getElementById('contagemForm')) {
                 }
             }
             
-            // ✅ SALVAR ITENS MODIFICADOS
             if (materiaisParaEnviar.length > 0) {
                 for (const material of materiaisParaEnviar) {
                     try {
@@ -2464,7 +2512,6 @@ if (document.getElementById('contagemForm')) {
                 }
             }
             
-            // ✅ MENSAGEM DE SUCESSO
             let msg = '';
             if (totalProcessados > 0 && totalDesativados > 0) {
                 msg = `✅ ${totalProcessados} item(ns) atualizado(s) e ${totalDesativados} baixa(s) realizada(s)!`;
@@ -2475,10 +2522,8 @@ if (document.getElementById('contagemForm')) {
             }
             mostrarToast(msg, 'sucesso');
             
-            // ✅ LIMPAR CAMPOS APENAS DOS ITENS ENVIADOS
             document.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina').forEach(cb => cb.checked = false);
             
-            // ✅ RECARREGAR DADOS
             cacheQuantidades = {};
             setTimeout(async () => {
                 await carregarTodosRegistros();
@@ -2534,6 +2579,8 @@ if (document.getElementById('contagemForm')) {
     window.removerEntradaConcreto = removerEntradaConcreto;
     window.validarConcretoEntrada = validarConcretoEntrada;
     window.redirecionarParaHome = redirecionarParaHome;
+    window.aplicarFiltro = aplicarFiltro;
+    window.limparFiltro = limparFiltro;
     
     // ============================================
     // INICIALIZAR
