@@ -1,4 +1,22 @@
 // ============================================
+// FUNÇÃO PARA OBTER DATA NO FUSO BRASIL (UTC-3)
+// ============================================
+
+function getDataBrasil() {
+    const agora = new Date();
+    // Ajustar para UTC-3 (Brasil)
+    const offsetBrasil = -3;
+    const horaUTC = agora.getTime() + (agora.getTimezoneOffset() * 60000);
+    const dataBrasil = new Date(horaUTC + (offsetBrasil * 3600000));
+    return dataBrasil.toISOString().split('T')[0];
+}
+
+// Substituir a linha que preenche a data automaticamente:
+// const dataFormatada = hoje.toISOString().split('T')[0];
+// Por:
+const dataFormatada = getDataBrasil();
+
+// ============================================
 // CÓDIGO ESPECÍFICO PARA PÁGINA DE CONTAGEM DIÁRIA
 // ============================================
 
