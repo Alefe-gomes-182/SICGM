@@ -122,7 +122,7 @@ if (document.getElementById('contagemForm')) {
     window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
-    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO
+    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO - CORRIGIDA
     // ============================================
     
     function travarItemAposRegistro(itemElement, tipoMaterial) {
@@ -133,13 +133,7 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        const qtdInput = itemElement.querySelector('.input-qtd');
-        if (qtdInput) {
-            qtdInput.setAttribute('readonly', 'readonly');
-            qtdInput.classList.add('input-locked');
-            qtdInput.style.backgroundColor = '#edf2f7';
-            qtdInput.style.cursor = 'not-allowed';
-        }
+        // NÃO TRAVAR A QTD - Ela ficará editável apenas com o checkbox "Dar baixa"
         
         const justificativaInput = itemElement.querySelector('.input-justificativa');
         if (justificativaInput) {
@@ -166,9 +160,39 @@ if (document.getElementById('contagemForm')) {
             select.style.cursor = 'not-allowed';
         });
         
+        // CHECKBOX DE BAIXA FICA HABILITADO
         const checkboxes = itemElement.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
         checkboxes.forEach(cb => {
             cb.style.cursor = 'pointer';
+            // Adicionar evento para desbloquear QTD quando marcado
+            cb.addEventListener('change', function() {
+                const item = this.closest('.material-item');
+                const qtdInput = item.querySelector('.input-qtd');
+                
+                if (this.checked) {
+                    // Desbloquear QTD para permitir zerar
+                    qtdInput.removeAttribute('readonly');
+                    qtdInput.classList.remove('input-locked');
+                    qtdInput.style.backgroundColor = '#ffffff';
+                    qtdInput.style.cursor = 'text';
+                    qtdInput.focus();
+                    mostrarToast('📝 Digite 0 (zero) para dar baixa no item', 'info');
+                } else {
+                    // Bloquear QTD novamente
+                    qtdInput.setAttribute('readonly', 'readonly');
+                    qtdInput.classList.add('input-locked');
+                    qtdInput.style.backgroundColor = '#edf2f7';
+                    qtdInput.style.cursor = 'not-allowed';
+                    // Restaurar valor anterior se não for 0
+                    const qtdAnterior = item.dataset.qtdAnterior || '0';
+                    if (parseFloat(qtdInput.value) === 0) {
+                        qtdInput.value = qtdAnterior;
+                        // Recalcular diferença
+                        const idUnico = qtdInput.id.replace('qtd-', '');
+                        calcularDiferenca(idUnico, item.dataset.codigo);
+                    }
+                }
+            });
         });
         
         itemElement.classList.add('item-registrado');
@@ -196,6 +220,17 @@ if (document.getElementById('contagemForm')) {
         const btnRemover = itemElement.querySelector('.btn-remover-trafo-x');
         if (btnRemover) {
             btnRemover.style.display = 'none';
+        }
+        
+        // Salvar QTD anterior para restaurar se desmarcar
+        const qtdInput = itemElement.querySelector('.input-qtd');
+        if (qtdInput) {
+            itemElement.dataset.qtdAnterior = qtdInput.value || '0';
+            // Bloquear QTD inicialmente
+            qtdInput.setAttribute('readonly', 'readonly');
+            qtdInput.classList.add('input-locked');
+            qtdInput.style.backgroundColor = '#edf2f7';
+            qtdInput.style.cursor = 'not-allowed';
         }
         
         const id = itemElement.dataset.id || itemElement.dataset.codigo;
@@ -788,7 +823,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ADICIONAR ENTRADA DE CONCRETO - CORRIGIDA
+    // ADICIONAR ENTRADA DE CONCRETO
     // ============================================
     
     function adicionarEntradaConcreto(idUnico) {
@@ -858,10 +893,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // ============================================
-    // REMOVER ENTRADA CONCRETO - CORRIGIDA
-    // ============================================
-    
     function removerEntradaConcreto(idUnico, entradaId) {
         const entradaDiv = document.getElementById(entradaId);
         if (entradaDiv && confirm('Remover esta entrada?')) {
@@ -877,10 +908,6 @@ if (document.getElementById('contagemForm')) {
             }
         }
     }
-    
-    // ============================================
-    // VALIDAR CONCRETO ENTRADA - CORRIGIDA
-    // ============================================
     
     function validarConcretoEntrada(idUnico, entradaId) {
         const entradaDiv = document.getElementById(entradaId);
@@ -919,10 +946,6 @@ if (document.getElementById('contagemForm')) {
             }
         }
     }
-    
-    // ============================================
-    // ATUALIZAR TOTAL CONCRETO - CORRIGIDA
-    // ============================================
     
     function atualizarTotalConcreto(idUnico) {
         const listDiv = document.getElementById(`concreto-entradas-list-${idUnico}`);
@@ -989,10 +1012,6 @@ if (document.getElementById('contagemForm')) {
             diferencaDiv.innerHTML = `✅ Total das entradas: ${total.toFixed(2)} (diferença: ${diferenca.toFixed(2)})`;
         }
     }
-    
-    // ============================================
-    // CALCULAR DIFERENÇA CONCRETO - CORRIGIDA
-    // ============================================
     
     function calcularDiferencaConcreto(idUnico, codigo) {
         calcularDiferenca(idUnico, codigo);
@@ -1364,7 +1383,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES PARA BOBINAS E TRAFOS
+    // FUNÇÕES PARA BOBINAS E TRAFOS - CORRIGIDAS
     // ============================================
     
     function verificarNObraBobina(index) {
@@ -1392,6 +1411,8 @@ if (document.getElementById('contagemForm')) {
     function toggleBaixaBobina(index, checkbox) {
         const nObraInput = document.getElementById(`n-obra-bobinas-${index}`);
         const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
+        const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
+        const item = document.querySelector(`.bobina-item[data-index="${index}"]`);
         
         if (checkbox.checked) {
             const nObra = nObraInput ? nObraInput.value.trim() : '';
@@ -1408,11 +1429,41 @@ if (document.getElementById('contagemForm')) {
                     setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
                 }
                 mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
-            } else {
-                if (alertaDiv) alertaDiv.style.display = 'none';
-                mostrarToast('✅ Item será desativado. Clique em "Registrar Contagem" para confirmar.', 'info');
+                return;
             }
+            
+            // Desbloquear QTD para permitir zerar
+            if (qtdInput) {
+                qtdInput.removeAttribute('readonly');
+                qtdInput.classList.remove('input-locked');
+                qtdInput.style.backgroundColor = '#ffffff';
+                qtdInput.style.cursor = 'text';
+                qtdInput.focus();
+                qtdInput.select();
+                mostrarToast('📝 Digite 0 (zero) para dar baixa na bobina', 'info');
+            }
+            
+            if (alertaDiv) alertaDiv.style.display = 'none';
+            mostrarToast('✅ Item será desativado. Digite 0 na QTD e clique em "Registrar Contagem".', 'info');
+            
         } else {
+            // Bloquear QTD novamente
+            if (qtdInput) {
+                qtdInput.setAttribute('readonly', 'readonly');
+                qtdInput.classList.add('input-locked');
+                qtdInput.style.backgroundColor = '#edf2f7';
+                qtdInput.style.cursor = 'not-allowed';
+                
+                // Restaurar valor anterior se for 0
+                if (item && parseFloat(qtdInput.value) === 0) {
+                    const qtdAnterior = item.dataset.qtdAnterior || '0';
+                    qtdInput.value = qtdAnterior;
+                    // Recalcular diferença
+                    const idUnico = qtdInput.id.replace('qtd-', '');
+                    calcularDiferenca(idUnico, item.dataset.codigo);
+                }
+            }
+            
             if (alertaDiv) {
                 alertaDiv.style.display = 'none';
             }
@@ -1425,6 +1476,8 @@ if (document.getElementById('contagemForm')) {
     function toggleBaixaTrafo(index, checkbox) {
         const nObraInput = document.getElementById(`n-obra-trafos-${index}`);
         const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
+        const qtdInput = document.getElementById(`qtd-trafos-${index}`);
+        const item = document.querySelector(`.trafo-item[data-index="${index}"]`);
         
         if (checkbox.checked) {
             const nObra = nObraInput ? nObraInput.value.trim() : '';
@@ -1441,11 +1494,41 @@ if (document.getElementById('contagemForm')) {
                     setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
                 }
                 mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
-            } else {
-                if (alertaDiv) alertaDiv.style.display = 'none';
-                mostrarToast('✅ Item será desativado. Clique em "Registrar Contagem" para confirmar.', 'info');
+                return;
             }
+            
+            // Desbloquear QTD para permitir zerar
+            if (qtdInput) {
+                qtdInput.removeAttribute('readonly');
+                qtdInput.classList.remove('input-locked');
+                qtdInput.style.backgroundColor = '#ffffff';
+                qtdInput.style.cursor = 'text';
+                qtdInput.focus();
+                qtdInput.select();
+                mostrarToast('📝 Digite 0 (zero) para dar baixa no trafo', 'info');
+            }
+            
+            if (alertaDiv) alertaDiv.style.display = 'none';
+            mostrarToast('✅ Item será desativado. Digite 0 na QTD e clique em "Registrar Contagem".', 'info');
+            
         } else {
+            // Bloquear QTD novamente
+            if (qtdInput) {
+                qtdInput.setAttribute('readonly', 'readonly');
+                qtdInput.classList.add('input-locked');
+                qtdInput.style.backgroundColor = '#edf2f7';
+                qtdInput.style.cursor = 'not-allowed';
+                
+                // Restaurar valor anterior se for 0
+                if (item && parseFloat(qtdInput.value) === 0) {
+                    const qtdAnterior = item.dataset.qtdAnterior || '0';
+                    qtdInput.value = qtdAnterior;
+                    // Recalcular diferença
+                    const idUnico = qtdInput.id.replace('qtd-', '');
+                    calcularDiferenca(idUnico, item.dataset.codigo);
+                }
+            }
+            
             if (alertaDiv) {
                 alertaDiv.style.display = 'none';
             }
@@ -1649,7 +1732,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CALCULAR DIFERENÇA - FUNÇÃO PRINCIPAL
+    // CALCULAR DIFERENÇA
     // ============================================
     
     function calcularDiferencaBobina(idUnico, codigo) {
