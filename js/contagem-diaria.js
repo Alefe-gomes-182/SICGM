@@ -143,13 +143,14 @@ if (document.getElementById('contagemForm')) {
             qtdInput.style.cursor = 'not-allowed';
         }
         
-        // Travar campo de justificativa/N obra
+        // ✅ CAMPO DE JUSTIFICATIVA/N OBRA FICA EDITÁVEL PARA PERMITIR BAIXA
         const justificativaInput = itemElement.querySelector('.input-justificativa');
         if (justificativaInput) {
-            justificativaInput.setAttribute('readonly', 'readonly');
-            justificativaInput.classList.add('input-locked');
-            justificativaInput.style.backgroundColor = '#edf2f7';
-            justificativaInput.style.cursor = 'not-allowed';
+            // Mantém editável
+            justificativaInput.style.backgroundColor = '#ffffff';
+            justificativaInput.style.cursor = 'text';
+            justificativaInput.placeholder = 'Digite o Nº da obra para dar baixa...';
+            // Não travar - permite edição para a baixa
         }
         
         // Travar campos extras (tombamento, série, etc)
@@ -172,11 +173,11 @@ if (document.getElementById('contagemForm')) {
             select.style.cursor = 'not-allowed';
         });
         
-        // Travar checkboxes de baixa
+        // ✅ CHECKBOX DE BAIXA FICA HABILITADO
         const checkboxes = itemElement.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
         checkboxes.forEach(cb => {
-            cb.setAttribute('disabled', 'disabled');
-            cb.style.cursor = 'not-allowed';
+            // Mantém habilitado
+            cb.style.cursor = 'pointer';
         });
         
         // Adicionar classe visual de item registrado
@@ -952,7 +953,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS (COM TRAVA)
+    // RENDERIZAR BOBINAS (COM TRAVA - N OBRA EDITÁVEL)
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -1011,7 +1012,6 @@ if (document.getElementById('contagemForm')) {
                                 <input type="checkbox" 
                                     class="checkbox-baixa-bobina" 
                                     data-index="${idx}"
-                                    ${disabledAttr}
                                     onchange="toggleBaixaBobina(${idx}, this)">
                                 Dar baixa
                             </label>
@@ -1082,9 +1082,8 @@ if (document.getElementById('contagemForm')) {
                             <label>N Obra</label>
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
-                                placeholder="Número da obra..." 
-                                class="input-justificativa ${lockedClass}"
-                                ${readonlyAttr}
+                                placeholder="Digite o Nº da obra para dar baixa..." 
+                                class="input-justificativa"
                                 ${existeNoBanco ? `oninput="verificarNObraBobina(${idx})"` : ''}>
                         </div>
                     </div>
@@ -1122,7 +1121,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS (COM TRAVA)
+    // RENDERIZAR TRAFOS (COM TRAVA - N OBRA EDITÁVEL)
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -1181,7 +1180,6 @@ if (document.getElementById('contagemForm')) {
                                 <input type="checkbox" 
                                     class="checkbox-baixa-trafo" 
                                     data-index="${idx}"
-                                    ${disabledAttr}
                                     onchange="toggleBaixaTrafo(${idx}, this)">
                                 Dar baixa
                             </label>
@@ -1274,9 +1272,8 @@ if (document.getElementById('contagemForm')) {
                             <label>N Obra</label>
                             <input type="text" id="n-obra-${idUnico}" 
                                 value="${material._n_obra || ''}"
-                                placeholder="Número da obra..." 
-                                class="input-justificativa ${lockedClass}"
-                                ${readonlyAttr}
+                                placeholder="Digite o Nº da obra para dar baixa..." 
+                                class="input-justificativa"
                                 ${existeNoBanco ? `oninput="verificarNObraTrafo(${idx})"` : ''}>
                         </div>
                     </div>
@@ -1358,6 +1355,9 @@ if (document.getElementById('contagemForm')) {
                     setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
                 }
                 mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
+            } else {
+                if (alertaDiv) alertaDiv.style.display = 'none';
+                mostrarToast('✅ Item será desativado. Clique em "Registrar Contagem" para confirmar.', 'info');
             }
         } else {
             if (alertaDiv) {
@@ -1388,6 +1388,9 @@ if (document.getElementById('contagemForm')) {
                     setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
                 }
                 mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
+            } else {
+                if (alertaDiv) alertaDiv.style.display = 'none';
+                mostrarToast('✅ Item será desativado. Clique em "Registrar Contagem" para confirmar.', 'info');
             }
         } else {
             if (alertaDiv) {
