@@ -2471,12 +2471,21 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ITEM FOI MODIFICADO - CORRIGIDO
+    // ITEM FOI MODIFICADO - CORRIGIDO (VERSÃO FINAL)
     // ============================================
-    
+
     function itemFoiModificado(inputQtd, item) {
         if (!inputQtd) {
             return false;
+        }
+        
+        // ✅ Verifica se o checkbox "Dar baixa" está marcado
+        const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
+        const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
+        
+        // ✅ Se "Dar baixa" está marcado, SEMPRE considera como modificado
+        if (darBaixa) {
+            return true;
         }
         
         const valor = inputQtd.value;
@@ -2504,12 +2513,6 @@ if (document.getElementById('contagemForm')) {
         
         if (!idRegistro || idRegistro === 'null') {
             return qtdAtual > 0;
-        }
-        
-        // ✅ Se o checkbox "Dar baixa" está marcado, considera como modificado
-        const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
-        if (checkboxBaixa && checkboxBaixa.checked) {
-            return true;
         }
         
         return qtdAtual !== qtdAnterior;
