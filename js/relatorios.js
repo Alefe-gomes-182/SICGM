@@ -412,7 +412,6 @@ function exportarCSV() {
             const valores = [];
             colunas.forEach(col => {
                 let texto = col.textContent.trim();
-                // Remover tags HTML se houver
                 texto = texto.replace(/<[^>]*>/g, '').trim();
                 valores.push(`"${texto}"`);
             });

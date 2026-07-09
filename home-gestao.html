@@ -105,6 +105,9 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
         }
 
         .menu-card:hover {
@@ -137,6 +140,25 @@
             font-size: 11px;
             display: inline-block;
             margin-top: 5px;
+        }
+
+        .badge-novo {
+            background: #48BB78;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 10px;
+            display: inline-block;
+            margin-top: 5px;
+            margin-left: 5px;
+            font-weight: 700;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
         .loading-overlay {
@@ -186,6 +208,37 @@
             margin-top: 20px;
             text-align: center;
         }
+
+        @media (max-width: 768px) {
+            .home-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .user-info {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .grid-menu {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-menu {
+                grid-template-columns: 1fr;
+            }
+
+            .home-header h1 {
+                font-size: 20px;
+            }
+
+            .welcome-card h2 {
+                font-size: 22px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -213,30 +266,37 @@
         </div>
 
         <div class="grid-menu">
-            <div class="menu-card" onclick="window.location.href='contagem-diaria/index.html'">
+            <!-- Contagem Diária -->
+            <a href="contagem-diaria/index.html" class="menu-card">
                 <div class="icon">📊</div>
                 <h3>Contagem Diária</h3>
                 <p>Registre e visualize as contagens diárias de materiais</p>
                 <span class="badge-gestao">✓ Disponível</span>
-            </div>
-            <div class="menu-card" onclick="window.location.href='mgm-list/index.html'">
+            </a>
+
+            <!-- Lista MGM -->
+            <a href="mgm-list/index.html" class="menu-card">
                 <div class="icon">📋</div>
                 <h3>Lista MGM</h3>
                 <p>Gerencie a lista de materiais MGM</p>
                 <span class="badge-gestao">✓ Disponível</span>
-            </div>
-            <div class="menu-card" onclick="alert('📈 Funcionalidade em desenvolvimento')">
+            </a>
+
+            <!-- Relatórios - CORRIGIDO -->
+            <a href="relatorios/index.html" class="menu-card">
                 <div class="icon">📈</div>
-                <h3>Relatórios</h3>
-                <p>Visualize relatórios e análises do sistema</p>
+                <h3>Relatórios <span class="badge-novo">NOVO</span></h3>
+                <p>Visualize relatórios e análises das contagens</p>
                 <span class="badge-gestao">✓ Disponível</span>
-            </div>
-            <div class="menu-card" onclick="alert('⚙️ Funcionalidade em desenvolvimento')">
+            </a>
+
+            <!-- Configurações -->
+            <a href="#" class="menu-card" onclick="mostrarEmDesenvolvimento(event)">
                 <div class="icon">⚙️</div>
                 <h3>Configurações</h3>
                 <p>Configure as preferências do sistema</p>
-                <span class="badge-gestao">✓ Disponível</span>
-            </div>
+                <span class="badge-gestao">🚧 Em breve</span>
+            </a>
         </div>
 
         <div class="restricted-msg">
@@ -297,6 +357,11 @@
                     sessionStorage.setItem('sessaoSICGM', JSON.stringify(dados));
                 } catch (e) {}
             }
+        }
+
+        function mostrarEmDesenvolvimento(e) {
+            e.preventDefault();
+            alert('⚙️ Funcionalidade em desenvolvimento. Em breve disponível!');
         }
 
         document.addEventListener('click', atualizarTimestampSessao);

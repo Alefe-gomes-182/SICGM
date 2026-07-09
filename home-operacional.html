@@ -105,6 +105,9 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
         }
 
         .menu-card:hover {
@@ -147,6 +150,25 @@
             font-size: 11px;
             display: inline-block;
             margin-top: 5px;
+        }
+
+        .badge-novo {
+            background: #48BB78;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 10px;
+            display: inline-block;
+            margin-top: 5px;
+            margin-left: 5px;
+            font-weight: 700;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
         .loading-overlay {
@@ -196,6 +218,37 @@
             margin-top: 20px;
             text-align: center;
         }
+
+        @media (max-width: 768px) {
+            .home-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .user-info {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .grid-menu {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-menu {
+                grid-template-columns: 1fr;
+            }
+
+            .home-header h1 {
+                font-size: 20px;
+            }
+
+            .welcome-card h2 {
+                font-size: 22px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -204,6 +257,7 @@
         <div class="loading-text">Validando acesso...</div>
     </div>
 
+    <div class="home-container" id="homeContent" style="display: none;">
         <div class="home-header">
             <h1>🏢 SICGM - Operacional</h1>
             <div class="user-info">
@@ -216,37 +270,37 @@
             </div>
         </div>
 
-        <!-- ADICIONE ESTE BOTÃO DE VOLTAR -->
-        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <button class="btn-voltar-home" onclick="redirecionarParaHome()">
-                🏠 Voltar ao Início
-            </button>
-        </div>
-
         <div class="welcome-card">
             <h2 id="mensagemBoasVindas">Bem-vindo ao SICGM!</h2>
-            <p>Você está logado como <strong>Operacional</strong>. Acesse as funcionalidades disponíveis para seu perfil.</p>
+            <p>Você está logado como <strong>Operacional</strong>. Apenas contagem diária está disponível.</p>
         </div>
 
         <div class="grid-menu">
-            <div class="menu-card" onclick="window.location.href='contagem-diaria/index.html'">
+            <!-- Contagem Diária (Disponível) -->
+            <a href="contagem-diaria/index.html" class="menu-card">
                 <div class="icon">📊</div>
                 <h3>Contagem Diária</h3>
                 <p>Registre e visualize as contagens diárias de materiais</p>
                 <span class="badge-operacional">✓ Disponível</span>
-            </div>
+            </a>
+
+            <!-- Lista MGM (Restrito) -->
             <div class="menu-card disabled" onclick="alert('⚠️ Funcionalidade restrita para perfil Operacional')">
                 <div class="icon">📋</div>
                 <h3>Lista MGM</h3>
                 <p>Gerencie a lista de materiais MGM</p>
                 <span class="badge-operacional" style="background: #FC8181;">🔒 Restrito</span>
             </div>
-            <div class="menu-card disabled" onclick="alert('⚠️ Funcionalidade restrita para perfil Operacional')">
+
+            <!-- Relatórios - CORRIGIDO -->
+            <a href="relatorios/index.html" class="menu-card">
                 <div class="icon">📈</div>
-                <h3>Relatórios</h3>
-                <p>Visualize relatórios e análises do sistema</p>
-                <span class="badge-operacional" style="background: #FC8181;">🔒 Restrito</span>
-            </div>
+                <h3>Relatórios <span class="badge-novo">NOVO</span></h3>
+                <p>Visualize relatórios e análises das contagens</p>
+                <span class="badge-operacional">✓ Disponível</span>
+            </a>
+
+            <!-- Configurações (Restrito) -->
             <div class="menu-card disabled" onclick="alert('⚠️ Funcionalidade restrita para perfil Operacional')">
                 <div class="icon">⚙️</div>
                 <h3>Configurações</h3>
@@ -256,7 +310,7 @@
         </div>
 
         <div class="restricted-msg">
-            ℹ️ Seu perfil <strong>Operacional</strong> permite apenas acessar a <strong>Contagem Diária</strong>.
+            ℹ️ Seu perfil <strong>Operacional</strong> permite acessar <strong>Contagem Diária</strong> e <strong>Relatórios</strong>.
         </div>
     </div>
 
@@ -268,7 +322,6 @@
             
             loadingOverlay.classList.add('active');
 
-            // VALIDAÇÃO OBRIGATÓRIA - Verificar sessão
             const sessao = verificarSessao();
             
             if (!sessao) {
@@ -277,7 +330,6 @@
                 return;
             }
 
-            // Verificar se o perfil é OPERACIONAL
             if (sessao.perfil !== 'OPERACIONAL') {
                 console.log(`🔒 Perfil ${sessao.perfil} não autorizado para esta página`);
                 window.location.href = 'index.html';

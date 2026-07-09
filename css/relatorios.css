@@ -247,6 +247,28 @@ tbody td {
     color: #276749;
 }
 
+/* Botão Voltar Home */
+.btn-voltar-home {
+    background: #4299E1;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-voltar-home:hover {
+    background: #3182CE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
 /* Responsividade */
 @media (max-width: 1024px) {
     .filtro-row {
