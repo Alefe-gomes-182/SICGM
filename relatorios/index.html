@@ -45,8 +45,8 @@
                         </select>
                     </div>
                     <div class="filtro-group">
-                        <label for="filtro-usuario">Usuário</label>
-                        <input type="text" id="filtro-usuario" placeholder="Nome do usuário...">
+                        <label for="filtro-codigo">Código do Material</label>
+                        <input type="text" id="filtro-codigo" placeholder="Digite o código...">
                     </div>
                     <div class="filtro-group filtro-botoes">
                         <button onclick="carregarRelatorios()" class="btn-filtrar">🔍 Filtrar</button>
@@ -58,20 +58,28 @@
             <!-- Estatísticas Rápidas -->
             <div class="stats-container" id="stats-container">
                 <div class="stat-card">
-                    <span class="stat-label">Total de Registros</span>
+                    <span class="stat-label">📦 Total de Registros</span>
                     <span class="stat-value" id="total-registros">0</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-label">Códigos Únicos</span>
+                    <span class="stat-label">🔢 Códigos Únicos</span>
                     <span class="stat-value" id="total-codigos">0</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-label">Última Contagem</span>
+                    <span class="stat-label">🔄 Última Contagem</span>
                     <span class="stat-value" id="ultima-contagem">-</span>
                 </div>
-                <div class="stat-card">
-                    <span class="stat-label">Total em Estoque</span>
-                    <span class="stat-value" id="total-estoque">0</span>
+                <div class="stat-card" style="border-left: 4px solid #EBF8FF;">
+                    <span class="stat-label">⚡ Trafos</span>
+                    <span class="stat-value" id="total-trafos">0</span>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #FAF5FF;">
+                    <span class="stat-label">🧵 Bobinas</span>
+                    <span class="stat-value" id="total-bobinas">0</span>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #F0FFF4;">
+                    <span class="stat-label">🏗️ Concretos</span>
+                    <span class="stat-value" id="total-concretos">0</span>
                 </div>
             </div>
 
@@ -80,7 +88,7 @@
                 <div class="tabela-header">
                     <h2>📋 Relatório por Código</h2>
                     <div class="tabela-actions">
-                        <button onclick="exportarCSV()" class="btn-exportar">📥 Exportar CSV</button>
+                        <button onclick="exportarExcel()" class="btn-exportar">📊 Exportar Excel</button>
                         <button onclick="exportarPDF()" class="btn-exportar">📄 Exportar PDF</button>
                     </div>
                 </div>
@@ -95,15 +103,17 @@
                                 <th>Descrição</th>
                                 <th>UND</th>
                                 <th>Tipo</th>
-                                <th>Quantidade Total</th>
-                                <th>Última Contagem</th>
+                                <th>QTD Física</th>
+                                <th>Saldo Sistêmico</th>
+                                <th>Acuracidade</th>
+                                <th>Bobinas Únicas</th>
                                 <th>Último Usuário</th>
                                 <th>Data da Última</th>
                             </tr>
                         </thead>
                         <tbody id="relatorio-body">
                             <tr>
-                                <td colspan="8" class="text-center">Nenhum dado encontrado</td>
+                                <td colspan="10" class="text-center">Nenhum dado encontrado</td>
                             </tr>
                         </tbody>
                     </table>

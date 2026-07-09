@@ -159,6 +159,46 @@ function mostrarToast(mensagem, tipo) {
 }
 
 // ============================================
+// CARREGAR POSIÇÃO DE ESTOQUE
+// ============================================
+
+let posicaoEstoque = {};
+
+async function carregarPosicaoEstoque() {
+    try {
+        const response = await fetch('../data/posicao-de-estoque.txt');
+        if (!response.ok) {
+            console.warn('⚠️ Arquivo posicao-de-estoque.txt não encontrado');
+            return;
+        }
+        
+        const texto = await response.text();
+        const linhas = texto.trim().split('\n');
+        
+        // Pular cabeçalho
+        for (let i = 1; i < linhas.length; i++) {
+            const linha = linhas[i].trim();
+            if (!linha) continue;
+            
+            // Separar por tabulação
+            const partes = linha.split('\t');
+            if (partes.length >= 7) {
+                const codmat = partes[1].trim(); // coluna 2 (índice 1)
+                const saldoOper = parseFloat(partes[6].trim()) || 0; // coluna 7 (índice 6)
+                
+                if (codmat) {
+                    posicaoEstoque[codmat] = saldoOper;
+                }
+            }
+        }
+        
+        console.log('📦 Posição de estoque carregada:', Object.keys(posicaoEstoque).length, 'códigos');
+    } catch (error) {
+        console.error('❌ Erro ao carregar posição de estoque:', error);
+    }
+}
+
+// ============================================
 // CARREGAR DADOS DO D1
 // ============================================
 
@@ -215,17 +255,19 @@ function processarDados(dados, filtros) {
             );
         }
         
-        // Filtro de usuário
-        if (filtros.usuario && filtros.usuario.trim()) {
-            const usuarioBusca = filtros.usuario.toLowerCase().trim();
+        // Filtro de código
+        if (filtros.codigo && filtros.codigo.trim()) {
+            const codigoBusca = filtros.codigo.trim();
             dadosFiltrados = dadosFiltrados.filter(item => 
-                item.nome && item.nome.toLowerCase().includes(usuarioBusca)
+                item.codigo && item.codigo.includes(codigoBusca)
             );
         }
     }
     
     // Agrupar por código
     const grupos = {};
+    const bobinasUnicas = new Set();
+    
     dadosFiltrados.forEach(item => {
         const codigo = item.codigo;
         if (!grupos[codigo]) {
@@ -238,12 +280,20 @@ function processarDados(dados, filtros) {
                 ultima_contagem: null,
                 ultimo_usuario: null,
                 ultima_data: null,
-                registros: []
+                registros: [],
+                // Para bobinas, contar itens únicos por tombamento
+                bobinas_unicas: new Set()
             };
         }
         
         grupos[codigo].quantidade_total += parseFloat(item.qtd) || 0;
         grupos[codigo].registros.push(item);
+        
+        // Para bobinas, adicionar tombamento ao set de únicos
+        if (item.tipo_material === 'bobina' && item.tombamento) {
+            grupos[codigo].bobinas_unicas.add(item.tombamento);
+            bobinasUnicas.add(item.tombamento);
+        }
         
         // Atualizar última contagem
         const dataItem = new Date(item.created_at || item.data);
@@ -274,16 +324,46 @@ function renderizarRelatorio(dados) {
     if (!dados || dados.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center">📭 Nenhum dado encontrado para os filtros selecionados</td>
+                <td colspan="10" class="text-center">📭 Nenhum dado encontrado para os filtros selecionados</td>
             </tr>
         `;
         return;
     }
     
     let html = '';
+    let totalBobinasUnicas = 0;
+    
     dados.forEach(item => {
         const badgeClass = `badge-${item.tipo_material}`;
         const tipoLabel = item.tipo_material.charAt(0).toUpperCase() + item.tipo_material.slice(1);
+        
+        // Buscar saldo sistemico
+        const saldoSistemico = posicaoEstoque[item.codigo] || 0;
+        const saldoFisico = item.quantidade_total;
+        
+        // Calcular acuracidade
+        let acuracidade = '-';
+        if (saldoSistemico > 0) {
+            const diferenca = Math.abs(saldoFisico - saldoSistemico);
+            const percentual = ((1 - (diferenca / saldoSistemico)) * 100);
+            acuracidade = percentual.toFixed(1) + '%';
+            
+            // Colorir baseado no percentual
+            if (percentual >= 95) {
+                acuracidade = `<span style="color: #48BB78; font-weight: 600;">✅ ${acuracidade}</span>`;
+            } else if (percentual >= 80) {
+                acuracidade = `<span style="color: #ED8936; font-weight: 600;">⚠️ ${acuracidade}</span>`;
+            } else {
+                acuracidade = `<span style="color: #FC8181; font-weight: 600;">❌ ${acuracidade}</span>`;
+            }
+        }
+        
+        // Contar bobinas únicas
+        let bobinasUnicasCount = '-';
+        if (item.tipo_material === 'bobina' && item.bobinas_unicas) {
+            bobinasUnicasCount = item.bobinas_unicas.size;
+            totalBobinasUnicas += item.bobinas_unicas.size;
+        }
         
         html += `
             <tr>
@@ -292,7 +372,9 @@ function renderizarRelatorio(dados) {
                 <td>${item.und}</td>
                 <td><span class="badge-tipo ${badgeClass}">${tipoLabel}</span></td>
                 <td><strong>${item.quantidade_total.toFixed(2)}</strong></td>
-                <td>${item.ultima_contagem || '-'}</td>
+                <td>${saldoSistemico.toFixed(2)}</td>
+                <td>${acuracidade}</td>
+                <td>${bobinasUnicasCount}</td>
                 <td>${item.ultimo_usuario || '-'}</td>
                 <td>${formatarDataHora(item.ultima_data)}</td>
             </tr>
@@ -300,6 +382,9 @@ function renderizarRelatorio(dados) {
     });
     
     tbody.innerHTML = html;
+    
+    // Atualizar contador de bobinas únicas no total
+    document.getElementById('total-bobinas-unicas').textContent = totalBobinasUnicas;
 }
 
 // ============================================
@@ -307,7 +392,11 @@ function renderizarRelatorio(dados) {
 // ============================================
 
 function atualizarEstatisticas(dados, dadosBrutos) {
-    document.getElementById('total-registros').textContent = dadosBrutos ? dadosBrutos.filter(i => i.ativo === 1 || i.ativo === true).length : 0;
+    // Total de registros ativos
+    const totalRegistros = dadosBrutos ? dadosBrutos.filter(i => i.ativo === 1 || i.ativo === true).length : 0;
+    document.getElementById('total-registros').textContent = totalRegistros;
+    
+    // Códigos únicos
     document.getElementById('total-codigos').textContent = dados ? dados.length : 0;
     
     // Última contagem
@@ -323,13 +412,24 @@ function atualizarEstatisticas(dados, dadosBrutos) {
         }
     }
     
-    // Total em estoque
-    if (dados) {
-        let total = 0;
-        dados.forEach(item => {
-            total += item.quantidade_total || 0;
-        });
-        document.getElementById('total-estoque').textContent = total.toFixed(2);
+    // Total por tipo de material
+    if (dadosBrutos) {
+        const ativos = dadosBrutos.filter(i => i.ativo === 1 || i.ativo === true);
+        
+        // Trafos
+        const trafos = ativos.filter(i => i.tipo_material === 'trafo');
+        const totalTrafos = trafos.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
+        document.getElementById('total-trafos').textContent = totalTrafos.toFixed(0);
+        
+        // Bobinas
+        const bobinas = ativos.filter(i => i.tipo_material === 'bobina');
+        const totalBobinas = bobinas.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
+        document.getElementById('total-bobinas').textContent = totalBobinas.toFixed(0);
+        
+        // Concretos
+        const concretos = ativos.filter(i => i.tipo_material === 'concreto');
+        const totalConcretos = concretos.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
+        document.getElementById('total-concretos').textContent = totalConcretos.toFixed(0);
     }
 }
 
@@ -356,7 +456,7 @@ async function carregarRelatorios() {
             dataInicio: document.getElementById('filtro-data-inicio')?.value || '',
             dataFim: document.getElementById('filtro-data-fim')?.value || '',
             tipoMaterial: document.getElementById('filtro-tipo-material')?.value || '',
-            usuario: document.getElementById('filtro-usuario')?.value || ''
+            codigo: document.getElementById('filtro-codigo')?.value || ''
         };
         
         // Processar dados
@@ -385,15 +485,15 @@ function limparFiltros() {
     document.getElementById('filtro-data-inicio').value = '';
     document.getElementById('filtro-data-fim').value = '';
     document.getElementById('filtro-tipo-material').value = '';
-    document.getElementById('filtro-usuario').value = '';
+    document.getElementById('filtro-codigo').value = '';
     carregarRelatorios();
 }
 
 // ============================================
-// EXPORTAR CSV
+// EXPORTAR EXCEL (XLSX)
 // ============================================
 
-function exportarCSV() {
+function exportarExcel() {
     const tbody = document.getElementById('relatorio-body');
     const linhas = tbody.querySelectorAll('tr');
     
@@ -402,42 +502,218 @@ function exportarCSV() {
         return;
     }
     
-    // Cabeçalho
-    let csv = 'Código;Descrição;UND;Tipo;Quantidade Total;Última Contagem;Último Usuário;Data da Última\n';
+    mostrarToast('🔄 Gerando arquivo Excel...', 'info');
     
-    // Dados
-    linhas.forEach(linha => {
-        const colunas = linha.querySelectorAll('td');
-        if (colunas.length > 0 && !linha.textContent.includes('Nenhum dado')) {
-            const valores = [];
-            colunas.forEach(col => {
-                let texto = col.textContent.trim();
-                texto = texto.replace(/<[^>]*>/g, '').trim();
-                valores.push(`"${texto}"`);
-            });
-            csv += valores.join(';') + '\n';
-        }
-    });
-    
-    // Download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `relatorio_contagem_${getDataBrasil()}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-    
-    mostrarToast('✅ CSV exportado com sucesso!', 'sucesso');
+    try {
+        // Cabeçalho
+        let htmlContent = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
+                  xmlns:x="urn:schemas-microsoft-com:office:excel" 
+                  xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="UTF-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <x:ExcelWorkbook>
+                        <x:ExcelWorksheets>
+                            <x:ExcelWorksheet>
+                                <x:Name>Relatório</x:Name>
+                                <x:WorksheetOptions>
+                                    <x:DisplayGridlines/>
+                                </x:WorksheetOptions>
+                            </x:ExcelWorksheet>
+                        </x:ExcelWorksheets>
+                    </x:ExcelWorkbook>
+                </xml>
+                <![endif]-->
+                <style>
+                    table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px; }
+                    th { background-color: #4299E1; color: white; font-weight: bold; padding: 8px 12px; border: 1px solid #2B6CB0; }
+                    td { padding: 6px 12px; border: 1px solid #CBD5E0; }
+                    .text-center { text-align: center; }
+                    .badge-trafo { background: #EBF8FF; }
+                    .badge-bobina { background: #FAF5FF; }
+                    .badge-concreto { background: #F0FFF4; }
+                </style>
+            </head>
+            <body>
+                <h2>📊 Relatório de Contagem - SICGM</h2>
+                <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Descrição</th>
+                            <th>UND</th>
+                            <th>Tipo</th>
+                            <th>QTD Física</th>
+                            <th>Saldo Sistêmico</th>
+                            <th>Acuracidade</th>
+                            <th>Bobinas Únicas</th>
+                            <th>Último Usuário</th>
+                            <th>Data da Última</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        // Dados
+        linhas.forEach(linha => {
+            const colunas = linha.querySelectorAll('td');
+            if (colunas.length > 0 && !linha.textContent.includes('Nenhum dado')) {
+                htmlContent += `<tr>`;
+                colunas.forEach(col => {
+                    let texto = col.textContent.trim();
+                    // Remover tags HTML (cores, etc)
+                    texto = texto.replace(/<[^>]*>/g, '').trim();
+                    htmlContent += `<td>${texto}</td>`;
+                });
+                htmlContent += `</tr>`;
+            }
+        });
+        
+        htmlContent += `
+                    </tbody>
+                </table>
+                <br>
+                <p style="font-size: 10px; color: #718096;">
+                    * Relatório gerado automaticamente pelo sistema SICGM
+                </p>
+            </body>
+            </html>
+        `;
+        
+        // Criar blob com o conteúdo HTML
+        const blob = new Blob([htmlContent], { 
+            type: 'application/vnd.ms-excel;charset=utf-8' 
+        });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `relatorio_contagem_${getDataBrasil()}.xls`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        
+        mostrarToast('✅ Excel exportado com sucesso!', 'sucesso');
+        
+    } catch (error) {
+        console.error('❌ Erro ao exportar Excel:', error);
+        mostrarToast('❌ Erro ao exportar Excel', 'erro');
+    }
 }
 
 // ============================================
-// EXPORTAR PDF (Simples - usando print)
+// EXPORTAR PDF (Impressão)
 // ============================================
 
 function exportarPDF() {
+    // Verificar se há dados
+    const tbody = document.getElementById('relatorio-body');
+    const linhas = tbody.querySelectorAll('tr');
+    
+    if (linhas.length === 0 || linhas[0].textContent.includes('Nenhum dado')) {
+        mostrarToast('⚠️ Não há dados para exportar', 'aviso');
+        return;
+    }
+    
     mostrarToast('🔄 Preparando PDF...', 'info');
+    
     setTimeout(() => {
+        // Salvar título original
+        const tituloOriginal = document.querySelector('.tabela-header h2')?.textContent || '';
+        
+        // Criar título para impressão
+        const tituloImpressao = document.createElement('div');
+        tituloImpressao.id = 'titulo-impressao';
+        tituloImpressao.style.cssText = `
+            display: none;
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #2D3748;
+            border-bottom: 2px solid #E2E8F0;
+            margin-bottom: 20px;
+        `;
+        tituloImpressao.innerHTML = `
+            📊 Relatório de Contagem - SICGM
+            <br>
+            <span style="font-size: 12px; font-weight: 400; color: #718096;">
+                Gerado em: ${new Date().toLocaleString('pt-BR')}
+            </span>
+        `;
+        
+        // Adicionar título para impressão
+        const tabelaContainer = document.querySelector('.tabela-container');
+        if (tabelaContainer) {
+            tabelaContainer.prepend(tituloImpressao);
+            tituloImpressao.style.display = 'block';
+        }
+        
+        // Adicionar estilo para impressão
+        const styleImpressao = document.createElement('style');
+        styleImpressao.id = 'style-impressao';
+        styleImpressao.textContent = `
+            @media print {
+                .filtros-relatorio, .stats-container, .tabela-actions, 
+                .btn-voltar-home, .header-container .title, 
+                #filtro-resultado, .loading-message, #mensagem {
+                    display: none !important;
+                }
+                #titulo-impressao {
+                    display: block !important;
+                }
+                .tabela-container {
+                    margin-top: 0 !important;
+                }
+                table {
+                    font-size: 10px !important;
+                }
+                thead th {
+                    background: #4299E1 !important;
+                    color: white !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                .badge-tipo {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+                .badge-trafo { background: #EBF8FF !important; }
+                .badge-bobina { background: #FAF5FF !important; }
+                .badge-concreto { background: #F0FFF4 !important; }
+                body {
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+                .container {
+                    max-width: 100% !important;
+                    padding: 10px !important;
+                }
+                .form-card {
+                    padding: 10px !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                }
+                .btn-navegacao {
+                    display: none !important;
+                }
+            }
+        `;
+        document.head.appendChild(styleImpressao);
+        
+        // Imprimir
         window.print();
+        
+        // Remover elementos de impressão após a impressão
+        setTimeout(() => {
+            const titulo = document.getElementById('titulo-impressao');
+            if (titulo) titulo.remove();
+            const style = document.getElementById('style-impressao');
+            if (style) style.remove();
+        }, 1000);
+        
+        mostrarToast('✅ PDF gerado com sucesso!', 'sucesso');
     }, 500);
 }
 
@@ -445,13 +721,16 @@ function exportarPDF() {
 // INICIALIZAR
 // ============================================
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Verificar sessão
     const sessao = sessionStorage.getItem('sessaoSICGM');
     if (!sessao) {
         window.location.href = '../index.html';
         return;
     }
+    
+    // Carregar posição de estoque
+    await carregarPosicaoEstoque();
     
     // Carregar relatórios
     carregarRelatorios();
@@ -463,6 +742,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 window.carregarRelatorios = carregarRelatorios;
 window.limparFiltros = limparFiltros;
-window.exportarCSV = exportarCSV;
+window.exportarExcel = exportarExcel;
 window.exportarPDF = exportarPDF;
 window.redirecionarParaHome = redirecionarParaHome;
