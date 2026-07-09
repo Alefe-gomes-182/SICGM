@@ -122,7 +122,7 @@ if (document.getElementById('contagemForm')) {
     window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
-    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO - CORRIGIDA
+    // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO
     // ============================================
     
     function travarItemAposRegistro(itemElement, tipoMaterial) {
@@ -133,7 +133,6 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // ✅ TRAVAR A QTD INICIALMENTE
         const qtdInput = itemElement.querySelector('.input-qtd');
         if (qtdInput) {
             qtdInput.setAttribute('readonly', 'readonly');
@@ -167,41 +166,14 @@ if (document.getElementById('contagemForm')) {
             select.style.cursor = 'not-allowed';
         });
         
-        // ✅ CHECKBOX DE BAIXA FICA HABILITADO E CONTROLA A QTD
-        const checkboxes = itemElement.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
-        checkboxes.forEach(cb => {
-            cb.style.cursor = 'pointer';
-            cb.disabled = false;
-            
-            // ✅ Evento para controlar a QTD
-            cb.addEventListener('change', function() {
-                const item = this.closest('.material-item');
-                const qtdInput = item.querySelector('.input-qtd');
-                
-                if (this.checked) {
-                    // Desbloquear QTD para permitir zerar
-                    qtdInput.removeAttribute('readonly');
-                    qtdInput.classList.remove('input-locked');
-                    qtdInput.style.backgroundColor = '#ffffff';
-                    qtdInput.style.cursor = 'text';
-                    qtdInput.focus();
-                    mostrarToast('📝 Digite 0 (zero) para dar baixa no item', 'info');
-                } else {
-                    // Bloquear QTD novamente
-                    qtdInput.setAttribute('readonly', 'readonly');
-                    qtdInput.classList.add('input-locked');
-                    qtdInput.style.backgroundColor = '#edf2f7';
-                    qtdInput.style.cursor = 'not-allowed';
-                    // Restaurar valor anterior se for 0
-                    const qtdAnterior = item.dataset.qtdAnterior || '0';
-                    if (parseFloat(qtdInput.value) === 0) {
-                        qtdInput.value = qtdAnterior;
-                        const idUnico = qtdInput.id.replace('qtd-', '');
-                        calcularDiferenca(idUnico, item.dataset.codigo);
-                    }
-                }
-            });
-        });
+        // Remover botão de baixa se existir
+        const btnBaixa = itemElement.querySelector('.btn-dar-baixa');
+        if (btnBaixa) {
+            btnBaixa.disabled = true;
+            btnBaixa.style.opacity = '0.5';
+            btnBaixa.style.cursor = 'not-allowed';
+            btnBaixa.textContent = '✅ Baixa realizada';
+        }
         
         itemElement.classList.add('item-registrado');
         itemElement.style.borderColor = '#48BB78';
@@ -230,7 +202,6 @@ if (document.getElementById('contagemForm')) {
             btnRemover.style.display = 'none';
         }
         
-        // ✅ Salvar QTD anterior
         if (qtdInput) {
             itemElement.dataset.qtdAnterior = qtdInput.value || '0';
         }
@@ -238,6 +209,263 @@ if (document.getElementById('contagemForm')) {
         const id = itemElement.dataset.id || itemElement.dataset.codigo;
         if (id) {
             itemsRegistrados.add(id);
+        }
+    }
+    
+    // ============================================
+    // FUNÇÃO PARA ABRIR MODAL DE CONFIRMAÇÃO DE BAIXA
+    // ============================================
+    
+    let baixaPendente = null;
+    
+    function abrirModalBaixa(tipo, index, tipoMaterial) {
+        const codigoInput = document.getElementById(`${tipo}-codigo-${index}`);
+        const descricaoInput = document.getElementById(`${tipo}-descricao-${index}`);
+        const tombamentoInput = document.getElementById(`${tipo}-tombamento-${index}`);
+        const item = document.querySelector(`.${tipoMaterial}-item[data-index="${index}"]`);
+        const idRegistro = item ? item.dataset.id : null;
+        
+        if (!idRegistro || idRegistro === 'null') {
+            mostrarToast('❌ Este item ainda não foi registrado no banco de dados.', 'erro');
+            return;
+        }
+        
+        const codigo = codigoInput ? codigoInput.value : '';
+        const descricao = descricaoInput ? descricaoInput.value : '';
+        const tombamento = tombamentoInput ? tombamentoInput.value : '';
+        
+        // Preencher o modal
+        const modal = document.getElementById('modal-baixa');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTitle = document.getElementById('modal-title');
+        const modalInfo = document.getElementById('modal-info');
+        const modalInput = document.getElementById('modal-n-obra');
+        const modalConfirmar = document.getElementById('modal-confirmar');
+        const modalCancelar = document.getElementById('modal-cancelar');
+        const modalError = document.getElementById('modal-error');
+        
+        // Definir ícone e título baseado no tipo
+        if (tipoMaterial === 'trafo') {
+            modalIcon.textContent = '⚡';
+            modalTitle.textContent = 'Dar Baixa no Trafo';
+        } else {
+            modalIcon.textContent = '🧵';
+            modalTitle.textContent = 'Dar Baixa na Bobina';
+        }
+        
+        // Informações do item
+        modalInfo.innerHTML = `
+            <span><span class="label">Código:</span> <span class="value">${codigo}</span></span>
+            <span><span class="label">Descrição:</span> <span class="value">${descricao}</span></span>
+            ${tombamento ? `<span><span class="label">Tombamento:</span> <span class="value">${tombamento}</span></span>` : ''}
+        `;
+        
+        // Limpar campos
+        modalInput.value = '';
+        modalInput.classList.remove('input-error');
+        modalError.style.display = 'none';
+        modalConfirmar.disabled = false;
+        modalConfirmar.textContent = '✅ Confirmar Baixa';
+        
+        // Armazenar dados pendentes
+        baixaPendente = {
+            tipo: tipo,
+            index: index,
+            tipoMaterial: tipoMaterial,
+            id: idRegistro,
+            codigo: codigo,
+            descricao: descricao
+        };
+        
+        // Exibir modal
+        modal.classList.add('active');
+        modalInput.focus();
+        
+        // Configurar eventos do modal
+        modalConfirmar.onclick = function() {
+            confirmarBaixa();
+        };
+        
+        modalCancelar.onclick = function() {
+            fecharModalBaixa();
+        };
+        
+        // Enter no input confirma
+        modalInput.onkeydown = function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmarBaixa();
+            }
+            if (e.key === 'Escape') {
+                fecharModalBaixa();
+            }
+        };
+        
+        // Fechar ao clicar fora
+        modal.onclick = function(e) {
+            if (e.target === modal) {
+                fecharModalBaixa();
+            }
+        };
+    }
+    
+    function confirmarBaixa() {
+        const modalInput = document.getElementById('modal-n-obra');
+        const modalError = document.getElementById('modal-error');
+        const modalConfirmar = document.getElementById('modal-confirmar');
+        
+        const nObra = modalInput.value.trim();
+        
+        if (!nObra) {
+            modalInput.classList.add('input-error');
+            modalError.style.display = 'block';
+            modalError.textContent = '⚠️ O Nº da Obra é obrigatório para dar baixa.';
+            modalInput.focus();
+            return;
+        }
+        
+        if (nObra.length < 3) {
+            modalInput.classList.add('input-error');
+            modalError.style.display = 'block';
+            modalError.textContent = '⚠️ Digite um Nº de obra válido (mínimo 3 caracteres).';
+            modalInput.focus();
+            return;
+        }
+        
+        // Desabilitar botão para evitar duplo clique
+        modalConfirmar.disabled = true;
+        modalConfirmar.textContent = '⏳ Processando...';
+        
+        if (!baixaPendente) {
+            mostrarToast('❌ Erro: dados pendentes não encontrados.', 'erro');
+            fecharModalBaixa();
+            return;
+        }
+        
+        // Executar a baixa
+        executarBaixa(baixaPendente.id, nObra, baixaPendente.tipoMaterial, baixaPendente.tipo, baixaPendente.index);
+    }
+    
+    function fecharModalBaixa() {
+        const modal = document.getElementById('modal-baixa');
+        modal.classList.remove('active');
+        baixaPendente = null;
+        
+        // Limpar campos
+        const modalInput = document.getElementById('modal-n-obra');
+        modalInput.value = '';
+        modalInput.classList.remove('input-error');
+        document.getElementById('modal-error').style.display = 'none';
+        document.getElementById('modal-confirmar').disabled = false;
+        document.getElementById('modal-confirmar').textContent = '✅ Confirmar Baixa';
+    }
+    
+    async function executarBaixa(id, nObra, tipoMaterial, tipo, index) {
+        try {
+            console.log(`🔴 Executando baixa: ID ${id}, Obra: ${nObra}, Tipo: ${tipoMaterial}`);
+            
+            const response = await fetch(`${API_URL}/api/desativar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: parseInt(id),
+                    obs: `Baixa para obra: ${nObra}`,
+                    tipo_material: tipoMaterial
+                })
+            });
+            
+            const resultado = await response.json();
+            console.log('📥 Resposta da baixa:', resultado);
+            
+            if (response.ok && resultado.success) {
+                mostrarToast(`✅ Baixa realizada com sucesso! Obra: ${nObra}`, 'sucesso');
+                
+                // Atualizar a interface
+                const item = document.querySelector(`.${tipoMaterial}-item[data-index="${index}"]`);
+                if (item) {
+                    // Marcar como baixado
+                    item.dataset.jaRegistrado = 'true';
+                    item.classList.add('item-registrado', 'item-baixado');
+                    item.style.borderColor = '#E53E3E';
+                    item.style.borderWidth = '2px';
+                    item.style.borderStyle = 'solid';
+                    
+                    // Atualizar o cabeçalho
+                    const header = item.querySelector('.material-header');
+                    if (header) {
+                        // Remover badge existente
+                        const oldBadge = header.querySelector('.badge-registrado');
+                        if (oldBadge) oldBadge.remove();
+                        
+                        const badge = document.createElement('span');
+                        badge.className = 'badge-registrado';
+                        badge.innerHTML = '🔴 Baixado';
+                        badge.style.cssText = `
+                            background: #E53E3E;
+                            color: white;
+                            padding: 2px 10px;
+                            border-radius: 12px;
+                            font-size: 11px;
+                            font-weight: 600;
+                            margin-left: 10px;
+                        `;
+                        header.appendChild(badge);
+                    }
+                    
+                    // Bloquear inputs
+                    const qtdInput = item.querySelector('.input-qtd');
+                    if (qtdInput) {
+                        qtdInput.value = '0';
+                        qtdInput.setAttribute('readonly', 'readonly');
+                        qtdInput.classList.add('input-locked');
+                        qtdInput.style.backgroundColor = '#edf2f7';
+                        qtdInput.style.cursor = 'not-allowed';
+                    }
+                    
+                    // Desabilitar botão de baixa
+                    const btnBaixa = item.querySelector('.btn-dar-baixa');
+                    if (btnBaixa) {
+                        btnBaixa.disabled = true;
+                        btnBaixa.style.opacity = '0.5';
+                        btnBaixa.style.cursor = 'not-allowed';
+                        btnBaixa.textContent = '🔴 Baixado';
+                    }
+                    
+                    // Atualizar campo de obra
+                    const justificativaInput = item.querySelector('.input-justificativa');
+                    if (justificativaInput) {
+                        justificativaInput.value = `Baixa para obra: ${nObra}`;
+                        justificativaInput.setAttribute('readonly', 'readonly');
+                        justificativaInput.style.backgroundColor = '#edf2f7';
+                        justificativaInput.style.cursor = 'not-allowed';
+                    }
+                    
+                    // Remover botão de remover
+                    const btnRemover = item.querySelector('.btn-remover-trafo-x');
+                    if (btnRemover) {
+                        btnRemover.style.display = 'none';
+                    }
+                }
+                
+                // Fechar modal
+                fecharModalBaixa();
+                
+                // Atualizar cache
+                cacheQuantidades = {};
+                await carregarTodosRegistros();
+                await carregarItensManuais();
+                
+            } else {
+                mostrarToast(`❌ Erro ao dar baixa: ${resultado.error || 'Erro desconhecido'}`, 'erro');
+                document.getElementById('modal-confirmar').disabled = false;
+                document.getElementById('modal-confirmar').textContent = '✅ Confirmar Baixa';
+            }
+            
+        } catch (error) {
+            console.error('❌ Erro ao executar baixa:', error);
+            mostrarToast('❌ Erro de conexão ao dar baixa.', 'erro');
+            document.getElementById('modal-confirmar').disabled = false;
+            document.getElementById('modal-confirmar').textContent = '✅ Confirmar Baixa';
         }
     }
     
@@ -1023,7 +1251,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS
+    // RENDERIZAR BOBINAS - COM BOTÃO DAR BAIXA
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -1064,27 +1292,29 @@ if (document.getElementById('contagemForm')) {
             const itemBloqueado = (existeNoBanco || jaRegistrado) ? 'material-bloqueado' : '';
             const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
             const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
+            const estaBaixado = jaRegistrado && material.ativo === false;
             
             html += `
-                <div class="material-item bobina-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''}" 
+                <div class="material-item bobina-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''} ${estaBaixado ? 'item-baixado' : ''}" 
                      data-codigo="${codigoBobina}" 
                      data-categoria="bobinas" 
                      data-tipo="bobina" 
                      data-id="${idRegistro}" 
                      data-tombamento="${material.tombamento || ''}"
                      data-index="${idx}"
-                     data-ja-registrado="${jaRegistrado}">
+                     data-ja-registrado="${jaRegistrado}"
+                     data-ativo="${material.ativo !== false ? '1' : '0'}">
                     <div class="material-header">
                         <span class="material-number">Bobina #${idx + 1}</span>
                         <div class="trafo-header-actions">
                             ${existeNoBanco ? `
-                            <label class="checkbox-baixa-label">
-                                <input type="checkbox" 
-                                    class="checkbox-baixa-bobina" 
-                                    data-index="${idx}"
-                                    onchange="toggleBaixaBobina(${idx}, this)">
-                                Dar baixa
-                            </label>
+                            <button type="button" 
+                                class="btn-dar-baixa" 
+                                onclick="abrirModalBaixa('bobina', ${idx}, 'bobina')"
+                                ${jaRegistrado ? 'disabled' : ''}
+                                ${estaBaixado ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                                ${estaBaixado ? '🔴 Baixado' : '🔴 Dar baixa'}
+                            </button>
                             ` : `
                             <button type="button" 
                                 class="btn-remover-trafo-x" 
@@ -1094,7 +1324,7 @@ if (document.getElementById('contagemForm')) {
                                 ✕
                             </button>
                             `}
-                            ${jaRegistrado ? '<span class="badge-registrado" style="margin-left:10px;">✅ Registrado</span>' : ''}
+                            ${jaRegistrado ? `<span class="badge-registrado" style="margin-left:10px; ${estaBaixado ? 'background:#E53E3E;' : ''}">${estaBaixado ? '🔴 Baixado' : '✅ Registrado'}</span>` : ''}
                         </div>
                     </div>
                     
@@ -1193,7 +1423,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR TRAFOS
+    // RENDERIZAR TRAFOS - COM BOTÃO DAR BAIXA
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -1234,27 +1464,29 @@ if (document.getElementById('contagemForm')) {
             const itemBloqueado = (existeNoBanco || jaRegistrado) ? 'material-bloqueado' : '';
             const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
             const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
+            const estaBaixado = jaRegistrado && material.ativo === false;
             
             html += `
-                <div class="material-item trafo-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''}" 
+                <div class="material-item trafo-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''} ${estaBaixado ? 'item-baixado' : ''}" 
                      data-codigo="${codigoTrafo}" 
                      data-categoria="trafos" 
                      data-tipo="trafo" 
                      data-id="${idRegistro}" 
                      data-tombamento="${material.tombamento || ''}"
                      data-index="${idx}"
-                     data-ja-registrado="${jaRegistrado}">
+                     data-ja-registrado="${jaRegistrado}"
+                     data-ativo="${material.ativo !== false ? '1' : '0'}">
                     <div class="material-header">
                         <span class="material-number">Trafo #${idx + 1}</span>
                         <div class="trafo-header-actions">
                             ${existeNoBanco ? `
-                            <label class="checkbox-baixa-label">
-                                <input type="checkbox" 
-                                    class="checkbox-baixa-trafo" 
-                                    data-index="${idx}"
-                                    onchange="toggleBaixaTrafo(${idx}, this)">
-                                Dar baixa
-                            </label>
+                            <button type="button" 
+                                class="btn-dar-baixa" 
+                                onclick="abrirModalBaixa('trafo', ${idx}, 'trafo')"
+                                ${jaRegistrado ? 'disabled' : ''}
+                                ${estaBaixado ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                                ${estaBaixado ? '🔴 Baixado' : '🔴 Dar baixa'}
+                            </button>
                             ` : `
                             <button type="button" 
                                 class="btn-remover-trafo-x" 
@@ -1264,7 +1496,7 @@ if (document.getElementById('contagemForm')) {
                                 ✕
                             </button>
                             `}
-                            ${jaRegistrado ? '<span class="badge-registrado" style="margin-left:10px;">✅ Registrado</span>' : ''}
+                            ${jaRegistrado ? `<span class="badge-registrado" style="margin-left:10px; ${estaBaixado ? 'background:#E53E3E;' : ''}">${estaBaixado ? '🔴 Baixado' : '✅ Registrado'}</span>` : ''}
                         </div>
                     </div>
                     
@@ -1385,15 +1617,14 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES PARA BOBINAS E TRAFOS - CORRIGIDAS
+    // FUNÇÕES PARA BOBINAS E TRAFOS
     // ============================================
     
     function verificarNObraBobina(index) {
         const nObraInput = document.getElementById(`n-obra-bobinas-${index}`);
-        const checkbox = document.querySelector(`.checkbox-baixa-bobina[data-index="${index}"]`);
         const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
         
-        if (nObraInput && nObraInput.value.trim() && checkbox && checkbox.checked) {
+        if (nObraInput && nObraInput.value.trim()) {
             if (alertaDiv) alertaDiv.style.display = 'none';
             nObraInput.classList.remove('input-error');
         }
@@ -1401,144 +1632,11 @@ if (document.getElementById('contagemForm')) {
     
     function verificarNObraTrafo(index) {
         const nObraInput = document.getElementById(`n-obra-trafos-${index}`);
-        const checkbox = document.querySelector(`.checkbox-baixa-trafo[data-index="${index}"]`);
         const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
         
-        if (nObraInput && nObraInput.value.trim() && checkbox && checkbox.checked) {
+        if (nObraInput && nObraInput.value.trim()) {
             if (alertaDiv) alertaDiv.style.display = 'none';
             nObraInput.classList.remove('input-error');
-        }
-    }
-    
-    function toggleBaixaBobina(index, checkbox) {
-        const nObraInput = document.getElementById(`n-obra-bobinas-${index}`);
-        const alertaDiv = document.getElementById(`alerta-baixa-bobina-${index}`);
-        const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
-        const item = document.querySelector(`.bobina-item[data-index="${index}"]`);
-        
-        if (checkbox.checked) {
-            const nObra = nObraInput ? nObraInput.value.trim() : '';
-            
-            if (!nObra) {
-                checkbox.checked = false;
-                if (alertaDiv) {
-                    alertaDiv.style.display = 'block';
-                    setTimeout(() => { alertaDiv.style.display = 'none'; }, 3000);
-                }
-                if (nObraInput) {
-                    nObraInput.classList.add('input-error');
-                    nObraInput.focus();
-                    setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
-                }
-                mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
-                return;
-            }
-            
-            // Desbloquear QTD para permitir zerar
-            if (qtdInput) {
-                qtdInput.removeAttribute('readonly');
-                qtdInput.classList.remove('input-locked');
-                qtdInput.style.backgroundColor = '#ffffff';
-                qtdInput.style.cursor = 'text';
-                qtdInput.focus();
-                qtdInput.select();
-                if (qtdInput.value !== '' && parseFloat(qtdInput.value) !== 0) {
-                    mostrarToast('📝 Digite 0 (zero) para dar baixa na bobina', 'info');
-                }
-            }
-            
-            if (alertaDiv) alertaDiv.style.display = 'none';
-            mostrarToast('✅ Item será desativado. Digite 0 na QTD e clique em "Registrar Contagem".', 'info');
-            
-        } else {
-            // Bloquear QTD novamente
-            if (qtdInput) {
-                qtdInput.setAttribute('readonly', 'readonly');
-                qtdInput.classList.add('input-locked');
-                qtdInput.style.backgroundColor = '#edf2f7';
-                qtdInput.style.cursor = 'not-allowed';
-                
-                // Restaurar valor anterior se for 0
-                if (item && parseFloat(qtdInput.value) === 0) {
-                    const qtdAnterior = item.dataset.qtdAnterior || '0';
-                    qtdInput.value = qtdAnterior;
-                    const idUnico = qtdInput.id.replace('qtd-', '');
-                    calcularDiferenca(idUnico, item.dataset.codigo);
-                }
-            }
-            
-            if (alertaDiv) {
-                alertaDiv.style.display = 'none';
-            }
-            if (nObraInput) {
-                nObraInput.classList.remove('input-error');
-            }
-        }
-    }
-    
-    function toggleBaixaTrafo(index, checkbox) {
-        const nObraInput = document.getElementById(`n-obra-trafos-${index}`);
-        const alertaDiv = document.getElementById(`alerta-baixa-trafo-${index}`);
-        const qtdInput = document.getElementById(`qtd-trafos-${index}`);
-        const item = document.querySelector(`.trafo-item[data-index="${index}"]`);
-        
-        if (checkbox.checked) {
-            const nObra = nObraInput ? nObraInput.value.trim() : '';
-            
-            if (!nObra) {
-                checkbox.checked = false;
-                if (alertaDiv) {
-                    alertaDiv.style.display = 'block';
-                    setTimeout(() => { alertaDiv.style.display = 'none'; }, 3000);
-                }
-                if (nObraInput) {
-                    nObraInput.classList.add('input-error');
-                    nObraInput.focus();
-                    setTimeout(() => nObraInput.classList.remove('input-error'), 2000);
-                }
-                mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
-                return;
-            }
-            
-            // Desbloquear QTD para permitir zerar
-            if (qtdInput) {
-                qtdInput.removeAttribute('readonly');
-                qtdInput.classList.remove('input-locked');
-                qtdInput.style.backgroundColor = '#ffffff';
-                qtdInput.style.cursor = 'text';
-                qtdInput.focus();
-                qtdInput.select();
-                if (qtdInput.value !== '' && parseFloat(qtdInput.value) !== 0) {
-                    mostrarToast('📝 Digite 0 (zero) para dar baixa no trafo', 'info');
-                }
-            }
-            
-            if (alertaDiv) alertaDiv.style.display = 'none';
-            mostrarToast('✅ Item será desativado. Digite 0 na QTD e clique em "Registrar Contagem".', 'info');
-            
-        } else {
-            // Bloquear QTD novamente
-            if (qtdInput) {
-                qtdInput.setAttribute('readonly', 'readonly');
-                qtdInput.classList.add('input-locked');
-                qtdInput.style.backgroundColor = '#edf2f7';
-                qtdInput.style.cursor = 'not-allowed';
-                
-                // Restaurar valor anterior se for 0
-                if (item && parseFloat(qtdInput.value) === 0) {
-                    const qtdAnterior = item.dataset.qtdAnterior || '0';
-                    qtdInput.value = qtdAnterior;
-                    const idUnico = qtdInput.id.replace('qtd-', '');
-                    calcularDiferenca(idUnico, item.dataset.codigo);
-                }
-            }
-            
-            if (alertaDiv) {
-                alertaDiv.style.display = 'none';
-            }
-            if (nObraInput) {
-                nObraInput.classList.remove('input-error');
-            }
         }
     }
     
@@ -1682,14 +1780,6 @@ if (document.getElementById('contagemForm')) {
             return false;
         }
         
-        const checkboxBaixa = document.querySelector(`.checkbox-baixa-trafo[data-index="${index}"]`);
-        if (checkboxBaixa && checkboxBaixa.checked) {
-            const nObra = document.getElementById(`n-obra-trafos-${index}`)?.value || '';
-            if (!nObra) {
-                return false;
-            }
-        }
-        
         return true;
     }
     
@@ -1722,14 +1812,6 @@ if (document.getElementById('contagemForm')) {
         
         if (!codigo || !descricao || !und || !tombamento) {
             return false;
-        }
-        
-        const checkboxBaixa = document.querySelector(`.checkbox-baixa-bobina[data-index="${index}"]`);
-        if (checkboxBaixa && checkboxBaixa.checked) {
-            const nObra = document.getElementById(`n-obra-bobinas-${index}`)?.value || '';
-            if (!nObra) {
-                return false;
-            }
         }
         
         return true;
@@ -2475,22 +2557,12 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ITEM FOI MODIFICADO - CORRIGIDO FINAL
+    // ITEM FOI MODIFICADO
     // ============================================
     
     function itemFoiModificado(inputQtd, item) {
         if (!inputQtd) {
             return false;
-        }
-        
-        // ✅ VERIFICA SE O CHECKBOX "DAR BAIXA" ESTÁ MARCADO
-        const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
-        const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
-        
-        // ✅ Se "Dar baixa" está marcado, SEMPRE considera como modificado
-        if (darBaixa) {
-            console.log('✅ Item com "Dar baixa" marcado - considerado modificado');
-            return true;
         }
         
         const valor = inputQtd.value;
@@ -2524,7 +2596,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ENVIAR FORMULÁRIO - CORRIGIDO
+    // ENVIAR FORMULÁRIO
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
@@ -2641,11 +2713,10 @@ if (document.getElementById('contagemForm')) {
         // ============================================
         
         const materiaisParaEnviar = [];
-        const materiaisParaDesativar = [];
         let temErroValidacao = false;
         let temDuplicata = false;
         
-        // TRAFOS - CORRIGIDO
+        // TRAFOS
         trafoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2655,51 +2726,18 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             if (!qtdInput) return;
             
-            // ✅ VERIFICA SE O CHECKBOX DE BAIXA ESTÁ MARCADO
-            const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo');
-            const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
-            const idRegistro = item.dataset.id || null;
-            
-            console.log(`🔍 Verificando Trafo #${index}: darBaixa=${darBaixa}, idRegistro=${idRegistro}`);
-            
-            // ✅ SE FOR BAIXA, PROCESSA MESMO COM QTD = 0
-            if (darBaixa && idRegistro && idRegistro !== 'null') {
-                const nObraInput = item.querySelector('.input-justificativa');
-                const nObra = nObraInput?.value || `Baixa realizada por ${nome}`;
-                
-                if (!nObra.trim()) {
-                    mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
-                    item.style.borderColor = '#FC8181';
-                    item.style.borderWidth = '2px';
-                    item.style.borderStyle = 'solid';
-                    temErroValidacao = true;
-                    return;
-                }
-                
-                materiaisParaDesativar.push({
-                    id: parseInt(idRegistro),
-                    obs: nObra,
-                    tipo_material: 'trafo'
-                });
-                console.log(`🔴 Trafo ID ${idRegistro} ADICIONADO para desativar com obs: ${nObra}`);
-                return;
-            }
-            
-            // ✅ VERIFICA SE O CAMPO ESTÁ VAZIO
             if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
                 return;
             }
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             
-            // ✅ SE NÃO FOI MODIFICADO, PULA
             if (!itemFoiModificado(qtdInput, item)) {
                 console.log(`⏭️ Trafo #${index} não foi modificado - pulando`);
                 return;
             }
             
-            // ✅ SE QTD = 0 E NÃO É BAIXA, PULA
-            if (qtdAtual === 0 && !darBaixa) {
+            if (qtdAtual === 0) {
                 return;
             }
             
@@ -2764,7 +2802,7 @@ if (document.getElementById('contagemForm')) {
             });
         });
         
-        // BOBINAS - CORRIGIDO
+        // BOBINAS
         bobinaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
@@ -2774,51 +2812,18 @@ if (document.getElementById('contagemForm')) {
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             if (!qtdInput) return;
             
-            // ✅ VERIFICA SE O CHECKBOX DE BAIXA ESTÁ MARCADO
-            const checkboxBaixa = item.querySelector('.checkbox-baixa-bobina');
-            const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
-            const idRegistro = item.dataset.id || null;
-            
-            console.log(`🔍 Verificando Bobina #${index}: darBaixa=${darBaixa}, idRegistro=${idRegistro}`);
-            
-            // ✅ SE FOR BAIXA, PROCESSA MESMO COM QTD = 0
-            if (darBaixa && idRegistro && idRegistro !== 'null') {
-                const nObraInput = item.querySelector('.input-justificativa');
-                const nObra = nObraInput?.value || `Baixa realizada por ${nome}`;
-                
-                if (!nObra.trim()) {
-                    mostrarToast('⚠️ Para dar baixa, preencha o Nº da Obra.', 'aviso');
-                    item.style.borderColor = '#FC8181';
-                    item.style.borderWidth = '2px';
-                    item.style.borderStyle = 'solid';
-                    temErroValidacao = true;
-                    return;
-                }
-                
-                materiaisParaDesativar.push({
-                    id: parseInt(idRegistro),
-                    obs: nObra,
-                    tipo_material: 'bobina'
-                });
-                console.log(`🔴 Bobina ID ${idRegistro} ADICIONADA para desativar com obs: ${nObra}`);
-                return;
-            }
-            
-            // ✅ VERIFICA SE O CAMPO ESTÁ VAZIO
             if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
                 return;
             }
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             
-            // ✅ SE NÃO FOI MODIFICADO, PULA
             if (!itemFoiModificado(qtdInput, item)) {
                 console.log(`⏭️ Bobina #${index} não foi modificada - pulando`);
                 return;
             }
             
-            // ✅ SE QTD = 0 E NÃO É BAIXA, PULA
-            if (qtdAtual === 0 && !darBaixa) {
+            if (qtdAtual === 0) {
                 return;
             }
             
@@ -2969,8 +2974,7 @@ if (document.getElementById('contagemForm')) {
             return;
         }
         
-        // ✅ CORREÇÃO: Verifica se há itens para desativar também
-        if (materiaisParaEnviar.length === 0 && materiaisParaDesativar.length === 0) {
+        if (materiaisParaEnviar.length === 0) {
             mostrarToast('ℹ️ Nenhum item foi modificado. Nada para salvar.', 'info');
             return;
         }
@@ -2984,83 +2988,38 @@ if (document.getElementById('contagemForm')) {
             botaoSubmit.textContent = 'Enviando...';
             
             let totalProcessados = 0;
-            let totalDesativados = 0;
             
             if (materiaisParaEnviar.length > 0) {
                 mostrarToast(`⏳ Salvando ${materiaisParaEnviar.length} item(ns)...`, 'info');
             }
             
-            if (materiaisParaDesativar.length > 0) {
-                mostrarToast(`⏳ Desativando ${materiaisParaDesativar.length} item(ns)...`, 'info');
-                
-                for (const item of materiaisParaDesativar) {
-                    try {
-                        console.log(`📤 Enviando requisição para desativar ID: ${item.id}`);
-                        const response = await fetch(`${API_URL}/api/desativar`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                id: item.id,
-                                obs: item.obs,
-                                tipo_material: item.tipo_material
-                            })
-                        });
+            for (const material of materiaisParaEnviar) {
+                try {
+                    const response = await fetch(`${API_URL}/api/salvar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(material)
+                    });
+                    
+                    if (response.ok) {
+                        totalProcessados++;
+                        console.log(`✅ ${material.tipo_material} ${material.codigo} salvo com sucesso`);
                         
-                        const resultado = await response.json();
-                        console.log('📥 Resposta do desativar:', resultado);
-                        
-                        if (response.ok) {
-                            totalDesativados++;
-                            console.log(`✅ Item ID ${item.id} desativado com sucesso`);
-                        } else {
-                            console.error(`❌ Erro ao desativar ID ${item.id}:`, resultado);
-                            mostrarToast(`❌ Erro ao desativar: ${resultado.error || 'Erro desconhecido'}`, 'erro');
-                        }
-                    } catch (error) {
-                        console.error(`❌ Erro ao desativar ID ${item.id}:`, error);
-                    }
-                }
-            }
-            
-            if (materiaisParaEnviar.length > 0) {
-                for (const material of materiaisParaEnviar) {
-                    try {
-                        const response = await fetch(`${API_URL}/api/salvar`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(material)
-                        });
-                        
-                        if (response.ok) {
-                            totalProcessados++;
-                            console.log(`✅ ${material.tipo_material} ${material.codigo} salvo com sucesso`);
-                            
-                            if (material.tipo_material === 'trafo' || material.tipo_material === 'bobina') {
-                                const itemElement = document.querySelector(`.${material.tipo_material}-item[data-codigo="${material.codigo}"][data-tombamento="${material.tombamento || ''}"]`);
-                                if (itemElement) {
-                                    travarItemAposRegistro(itemElement, material.tipo_material);
-                                }
+                        if (material.tipo_material === 'trafo' || material.tipo_material === 'bobina') {
+                            const itemElement = document.querySelector(`.${material.tipo_material}-item[data-codigo="${material.codigo}"][data-tombamento="${material.tombamento || ''}"]`);
+                            if (itemElement) {
+                                travarItemAposRegistro(itemElement, material.tipo_material);
                             }
-                        } else {
-                            console.error(`❌ Erro ao salvar ${material.codigo}:`, await response.text());
                         }
-                    } catch (error) {
-                        console.error(`❌ Erro ao salvar ${material.codigo}:`, error);
+                    } else {
+                        console.error(`❌ Erro ao salvar ${material.codigo}:`, await response.text());
                     }
+                } catch (error) {
+                    console.error(`❌ Erro ao salvar ${material.codigo}:`, error);
                 }
             }
             
-            let msg = '';
-            if (totalProcessados > 0 && totalDesativados > 0) {
-                msg = `✅ ${totalProcessados} item(ns) registrado(s) e ${totalDesativados} baixa(s) realizada(s)!`;
-            } else if (totalProcessados > 0) {
-                msg = `✅ ${totalProcessados} item(ns) registrado(s) com sucesso!`;
-            } else if (totalDesativados > 0) {
-                msg = `✅ ${totalDesativados} baixa(s) realizada(s) com sucesso!`;
-            }
-            mostrarToast(msg, 'sucesso');
-            
-            document.querySelectorAll('.checkbox-baixa-trafo, .checkbox-baixa-bobina').forEach(cb => cb.checked = false);
+            mostrarToast(`✅ ${totalProcessados} item(ns) registrado(s) com sucesso!`, 'sucesso');
             
             cacheQuantidades = {};
             setTimeout(async () => {
@@ -3108,8 +3067,8 @@ if (document.getElementById('contagemForm')) {
     window.adicionarBobina = adicionarBobina;
     window.removerTrafo = removerTrafo;
     window.removerBobina = removerBobina;
-    window.toggleBaixaTrafo = toggleBaixaTrafo;
-    window.toggleBaixaBobina = toggleBaixaBobina;
+    window.abrirModalBaixa = abrirModalBaixa;
+    window.fecharModalBaixa = fecharModalBaixa;
     window.verificarNObraTrafo = verificarNObraTrafo;
     window.verificarNObraBobina = verificarNObraBobina;
     window.adicionarEntradaConcreto = adicionarEntradaConcreto;

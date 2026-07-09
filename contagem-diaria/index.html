@@ -23,6 +23,34 @@
         <span class="btn-navegacao-texto">Fim</span>
     </button>
 
+    <!-- ============================================ -->
+    <!-- MODAL DE CONFIRMAÇÃO DE BAIXA                -->
+    <!-- ============================================ -->
+    <div id="modal-baixa" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <span class="modal-icon" id="modal-icon">⚡</span>
+                <h2 id="modal-title">Dar Baixa no Trafo</h2>
+            </div>
+            <div class="modal-body">
+                <p>Confirme a baixa do item abaixo. Esta ação <strong>desativará</strong> o item no sistema.</p>
+                <div class="item-info" id="modal-info">
+                    <span><span class="label">Código:</span> <span class="value">-</span></span>
+                    <span><span class="label">Descrição:</span> <span class="value">-</span></span>
+                </div>
+                <label for="modal-n-obra">Nº da Obra *</label>
+                <input type="text" id="modal-n-obra" placeholder="Digite o número da obra..." autocomplete="off">
+                <div id="modal-error" style="display: none; color: #E53E3E; font-size: 0.85em; margin-top: 6px; font-weight: 500;">
+                    ⚠️ O Nº da Obra é obrigatório.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancelar" id="modal-cancelar">Cancelar</button>
+                <button class="btn-modal-confirmar" id="modal-confirmar">✅ Confirmar Baixa</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="form-card">
             

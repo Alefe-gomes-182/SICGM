@@ -2329,3 +2329,281 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
 }
+
+/* ============================================ */
+/* BOTÃO DE DAR BAIXA (NOVO)                    */
+/* ============================================ */
+
+.btn-dar-baixa {
+    background: #E53E3E;
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+}
+
+.btn-dar-baixa:hover {
+    background: #C53030;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+.btn-dar-baixa:active {
+    transform: scale(0.95);
+}
+
+.btn-dar-baixa:disabled {
+    background: #A0AEC0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============================================ */
+/* MODAL DE CONFIRMAÇÃO DE BAIXA                */
+/* ============================================ */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeInModal 0.3s ease-out;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-container {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 30px 35px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideUpModal 0.3s ease-out;
+}
+
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.modal-header .modal-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.modal-header h2 {
+    color: #2D3748;
+    font-size: 1.2em;
+    margin: 0;
+    font-weight: 600;
+}
+
+.modal-body {
+    margin-bottom: 25px;
+}
+
+.modal-body p {
+    color: #4A5568;
+    font-size: 0.95em;
+    line-height: 1.6;
+    margin: 0 0 15px 0;
+}
+
+.modal-body .item-info {
+    background: #F7FAFC;
+    border-radius: 8px;
+    padding: 12px 16px;
+    border: 1px solid #E2E8F0;
+    margin-bottom: 15px;
+}
+
+.modal-body .item-info span {
+    display: block;
+    font-size: 0.85em;
+    color: #4A5568;
+}
+
+.modal-body .item-info .label {
+    font-weight: 600;
+    color: #2D3748;
+}
+
+.modal-body .item-info .value {
+    color: #2B6CB0;
+    font-weight: 500;
+}
+
+.modal-body label {
+    display: block;
+    font-weight: 600;
+    color: #2D3748;
+    font-size: 0.9em;
+    margin-bottom: 6px;
+}
+
+.modal-body input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #E2E8F0;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    outline: none;
+    background: #FFFFFF;
+}
+
+.modal-body input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.modal-body input.input-error {
+    border-color: #FC8181;
+    background: #FFF5F5;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.modal-footer button {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-footer .btn-modal-cancelar {
+    background: #EDF2F7;
+    color: #4A5568;
+}
+
+.modal-footer .btn-modal-cancelar:hover {
+    background: #E2E8F0;
+}
+
+.modal-footer .btn-modal-confirmar {
+    background: #E53E3E;
+    color: white;
+}
+
+.modal-footer .btn-modal-confirmar:hover {
+    background: #C53030;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
+}
+
+.modal-footer .btn-modal-confirmar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - MODAL                       */
+/* ============================================ */
+
+@media (max-width: 480px) {
+    .modal-container {
+        padding: 20px;
+        max-width: 95%;
+    }
+    
+    .modal-header h2 {
+        font-size: 1em;
+    }
+    
+    .modal-header .modal-icon {
+        font-size: 22px;
+    }
+    
+    .modal-body p {
+        font-size: 0.85em;
+    }
+    
+    .modal-body input {
+        padding: 10px 14px;
+        font-size: 0.9em;
+    }
+    
+    .modal-footer button {
+        padding: 8px 16px;
+        font-size: 0.8em;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 360px) {
+    .modal-container {
+        padding: 15px;
+    }
+    
+    .modal-header h2 {
+        font-size: 0.9em;
+    }
+    
+    .modal-body .item-info {
+        padding: 8px 12px;
+    }
+    
+    .modal-body .item-info span {
+        font-size: 0.75em;
+    }
+}
