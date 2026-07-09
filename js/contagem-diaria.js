@@ -1383,7 +1383,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES PARA BOBINAS E TRAFOS - CORRIGIDAS
+    // FUNÇÕES PARA BOBINAS E TRAFOS
     // ============================================
     
     function verificarNObraBobina(index) {
@@ -2471,19 +2471,21 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ITEM FOI MODIFICADO - CORRIGIDO (VERSÃO FINAL)
+    // ITEM FOI MODIFICADO - CORRIGIDO FINAL
     // ============================================
-
+    
     function itemFoiModificado(inputQtd, item) {
+        // ✅ Se o campo não existe, não foi modificado
         if (!inputQtd) {
             return false;
         }
         
-        // ✅ Verifica se o checkbox "Dar baixa" está marcado
+        // ✅ VERIFICA SE O CHECKBOX "DAR BAIXA" ESTÁ MARCADO
         const checkboxBaixa = item.querySelector('.checkbox-baixa-trafo, .checkbox-baixa-bobina');
         const darBaixa = checkboxBaixa ? checkboxBaixa.checked : false;
         
         // ✅ Se "Dar baixa" está marcado, SEMPRE considera como modificado
+        // Isso garante que o item seja enviado para desativação
         if (darBaixa) {
             return true;
         }
@@ -2632,7 +2634,7 @@ if (document.getElementById('contagemForm')) {
         }
         
         // ============================================
-        // IDENTIFICAR APENAS ITENS MODIFICADOS - CORRIGIDO
+        // IDENTIFICAR APENAS ITENS MODIFICADOS
         // ============================================
         
         const materiaisParaEnviar = [];
@@ -2664,6 +2666,7 @@ if (document.getElementById('contagemForm')) {
                     obs: nObra,
                     tipo_material: 'trafo'
                 });
+                console.log(`🔴 Trafo ID ${idRegistro} será desativado com obs: ${nObra}`);
                 return;
             }
             
@@ -2769,6 +2772,7 @@ if (document.getElementById('contagemForm')) {
                     obs: nObra,
                     tipo_material: 'bobina'
                 });
+                console.log(`🔴 Bobina ID ${idRegistro} será desativada com obs: ${nObra}`);
                 return;
             }
             
@@ -2962,6 +2966,7 @@ if (document.getElementById('contagemForm')) {
                 
                 for (const item of materiaisParaDesativar) {
                     try {
+                        console.log(`📤 Enviando requisição para desativar ID: ${item.id}`);
                         const response = await fetch(`${API_URL}/api/desativar`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -2972,11 +2977,15 @@ if (document.getElementById('contagemForm')) {
                             })
                         });
                         
+                        const resultado = await response.json();
+                        console.log('📥 Resposta do desativar:', resultado);
+                        
                         if (response.ok) {
                             totalDesativados++;
                             console.log(`✅ Item ID ${item.id} desativado com sucesso`);
                         } else {
-                            console.error(`❌ Erro ao desativar ID ${item.id}:`, await response.text());
+                            console.error(`❌ Erro ao desativar ID ${item.id}:`, resultado);
+                            mostrarToast(`❌ Erro ao desativar: ${resultado.error || 'Erro desconhecido'}`, 'erro');
                         }
                     } catch (error) {
                         console.error(`❌ Erro ao desativar ID ${item.id}:`, error);
