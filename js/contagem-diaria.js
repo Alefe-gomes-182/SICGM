@@ -788,7 +788,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ADICIONAR ENTRADA DE CONCRETO
+    // ADICIONAR ENTRADA DE CONCRETO - CORRIGIDA
     // ============================================
     
     function adicionarEntradaConcreto(idUnico) {
@@ -824,7 +824,11 @@ if (document.getElementById('contagemForm')) {
         `;
         
         listDiv.appendChild(entradaDiv);
-        atualizarTotalConcreto(idUnico);
+        
+        const qtdPrincipal = document.getElementById(`qtd-${idUnico}`);
+        if (qtdPrincipal && qtdPrincipal.value !== '' && qtdPrincipal.value !== null) {
+            atualizarTotalConcreto(idUnico);
+        }
     }
     
     function toggleConcretoEntradaFields(entradaId) {
@@ -854,13 +858,29 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
+    // ============================================
+    // REMOVER ENTRADA CONCRETO - CORRIGIDA
+    // ============================================
+    
     function removerEntradaConcreto(idUnico, entradaId) {
         const entradaDiv = document.getElementById(entradaId);
         if (entradaDiv && confirm('Remover esta entrada?')) {
             entradaDiv.remove();
-            atualizarTotalConcreto(idUnico);
+            const qtdPrincipal = document.getElementById(`qtd-${idUnico}`);
+            if (qtdPrincipal && qtdPrincipal.value !== '' && qtdPrincipal.value !== null) {
+                atualizarTotalConcreto(idUnico);
+            } else {
+                const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
+                if (diferencaDiv) {
+                    diferencaDiv.style.display = 'none';
+                }
+            }
         }
     }
+    
+    // ============================================
+    // VALIDAR CONCRETO ENTRADA - CORRIGIDA
+    // ============================================
     
     function validarConcretoEntrada(idUnico, entradaId) {
         const entradaDiv = document.getElementById(entradaId);
@@ -889,8 +909,20 @@ if (document.getElementById('contagemForm')) {
             qtdInput.value = Math.abs(qtd);
         }
         
-        atualizarTotalConcreto(idUnico);
+        const qtdPrincipal = document.getElementById(`qtd-${idUnico}`);
+        if (qtdPrincipal && qtdPrincipal.value !== '' && qtdPrincipal.value !== null) {
+            atualizarTotalConcreto(idUnico);
+        } else {
+            const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
+            if (diferencaDiv) {
+                diferencaDiv.style.display = 'none';
+            }
+        }
     }
+    
+    // ============================================
+    // ATUALIZAR TOTAL CONCRETO - CORRIGIDA
+    // ============================================
     
     function atualizarTotalConcreto(idUnico) {
         const listDiv = document.getElementById(`concreto-entradas-list-${idUnico}`);
@@ -909,33 +941,58 @@ if (document.getElementById('contagemForm')) {
         
         totalSpan.textContent = total.toFixed(2);
         
-        const qtdAtual = parseFloat(document.getElementById(`qtd-${idUnico}`)?.value) || 0;
+        const qtdInput = document.getElementById(`qtd-${idUnico}`);
+        if (!qtdInput || qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
+            const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
+            if (diferencaDiv) {
+                diferencaDiv.style.display = 'none';
+            }
+            return;
+        }
+        
+        const qtdAtual = parseFloat(qtdInput.value) || 0;
         const qtdAnterior = parseFloat(document.getElementById(`qtd-anterior-${idUnico}`)?.value) || 0;
         const diferenca = qtdAtual - qtdAnterior;
         
         const diferencaDiv = document.getElementById(`diferenca-${idUnico}`);
-        if (diferencaDiv) {
-            const materialItem = document.querySelector(`.concreto-item[data-index="${idUnico.split('-')[1]}"]`);
-            const temContagemAnterior = materialItem?.dataset?.temContagemAnterior === 'true';
-            
-            if (!temContagemAnterior && qtdAnterior === 0) {
-                diferencaDiv.style.display = 'flex';
-                diferencaDiv.className = 'diferenca-indicador diferenca-ok';
-                diferencaDiv.innerHTML = `✅ Primeira contagem - Total das entradas: ${total.toFixed(2)}`;
-                return;
-            }
-            
-            if (Math.abs(total - diferenca) > 0.001) {
-                diferencaDiv.style.display = 'flex';
-                diferencaDiv.className = 'diferenca-indicador diferenca-erro';
-                diferencaDiv.innerHTML = `❌ Total das entradas (${total.toFixed(2)}) não bate com a diferença (${diferenca.toFixed(2)})`;
-            } else {
-                diferencaDiv.style.display = 'flex';
-                diferencaDiv.className = 'diferenca-indicador diferenca-ok';
-                diferencaDiv.innerHTML = `✅ Total das entradas: ${total.toFixed(2)} (diferença: ${diferenca.toFixed(2)})`;
-            }
+        if (!diferencaDiv) return;
+        
+        const materialItem = document.querySelector(`.concreto-item[data-index="${idUnico.split('-')[1]}"]`);
+        const temContagemAnterior = materialItem?.dataset?.temContagemAnterior === 'true';
+        
+        if (!temContagemAnterior && qtdAnterior === 0 && qtdAtual === 0) {
+            diferencaDiv.style.display = 'none';
+            return;
+        }
+        
+        if (!temContagemAnterior && qtdAnterior === 0 && qtdAtual > 0) {
+            diferencaDiv.style.display = 'flex';
+            diferencaDiv.className = 'diferenca-indicador diferenca-ok';
+            diferencaDiv.innerHTML = `✅ Primeira contagem - Total das entradas: ${total.toFixed(2)}`;
+            return;
+        }
+        
+        if (temContagemAnterior && total === 0 && diferenca === 0) {
+            diferencaDiv.style.display = 'flex';
+            diferencaDiv.className = 'diferenca-indicador diferenca-igual';
+            diferencaDiv.innerHTML = '✓ Sem alteração';
+            return;
+        }
+        
+        if (Math.abs(total - diferenca) > 0.001) {
+            diferencaDiv.style.display = 'flex';
+            diferencaDiv.className = 'diferenca-indicador diferenca-erro';
+            diferencaDiv.innerHTML = `❌ Total das entradas (${total.toFixed(2)}) não bate com a diferença (${diferenca.toFixed(2)})`;
+        } else {
+            diferencaDiv.style.display = 'flex';
+            diferencaDiv.className = 'diferenca-indicador diferenca-ok';
+            diferencaDiv.innerHTML = `✅ Total das entradas: ${total.toFixed(2)} (diferença: ${diferenca.toFixed(2)})`;
         }
     }
+    
+    // ============================================
+    // CALCULAR DIFERENÇA CONCRETO - CORRIGIDA
+    // ============================================
     
     function calcularDiferencaConcreto(idUnico, codigo) {
         calcularDiferenca(idUnico, codigo);
@@ -1501,7 +1558,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES DE VALIDAÇÃO - CORRIGIDAS
+    // FUNÇÕES DE VALIDAÇÃO
     // ============================================
     
     function validarTrafoCompleto(index) {
@@ -1512,7 +1569,6 @@ if (document.getElementById('contagemForm')) {
         
         const qtdInput = document.getElementById(`qtd-trafos-${index}`);
         
-        // Se o campo estiver vazio, não precisa validar
         if (!qtdInput || qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
             return true;
         }
@@ -1523,7 +1579,6 @@ if (document.getElementById('contagemForm')) {
             return false;
         }
         
-        // Se quantidade for 0, não precisa validar os outros campos
         if (qtd === 0) {
             return true;
         }
@@ -1594,7 +1649,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CALCULAR DIFERENÇA - CORRIGIDA
+    // CALCULAR DIFERENÇA - FUNÇÃO PRINCIPAL
     // ============================================
     
     function calcularDiferencaBobina(idUnico, codigo) {
@@ -1612,7 +1667,6 @@ if (document.getElementById('contagemForm')) {
         
         if (!inputQtd || !inputAnterior || !diferencaDiv) return;
         
-        // Se o campo estiver vazio, esconde a diferença e SAI
         if (inputQtd.value === '' || inputQtd.value === null || inputQtd.value === undefined) {
             diferencaDiv.style.display = 'none';
             return;
@@ -2334,7 +2388,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ITEM FOI MODIFICADO - CORRIGIDA
+    // ITEM FOI MODIFICADO
     // ============================================
     
     function itemFoiModificado(inputQtd, item) {
@@ -2373,7 +2427,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ENVIAR FORMULÁRIO - CORRIGIDO
+    // ENVIAR FORMULÁRIO
     // ============================================
     
     document.getElementById('contagemForm').addEventListener('submit', async (e) => {
@@ -2913,6 +2967,7 @@ if (document.getElementById('contagemForm')) {
     window.controlarBotoesNavegacao = controlarBotoesNavegacao;
     window.travarItemAposRegistro = travarItemAposRegistro;
     window.itemFoiModificado = itemFoiModificado;
+    window.atualizarTotalConcreto = atualizarTotalConcreto;
     
     // ============================================
     // INICIALIZAR
