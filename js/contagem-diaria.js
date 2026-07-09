@@ -1251,7 +1251,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR BOBINAS - COM BOTÃO DAR BAIXA
+    // RENDERIZAR BOBINAS - COM BOTÃO DAR BAIXA CORRIGIDO
     // ============================================
 
     function renderizarBobinas(materiais) {
@@ -1288,22 +1288,27 @@ if (document.getElementById('contagemForm')) {
             const idx = index;
             const jaRegistrado = material._jaRegistrado || false;
             
+            // ✅ CORREÇÃO: Verificar se o item está baixado (ativo === false)
+            const estaBaixado = jaRegistrado && material.ativo === false;
+            
             const lockedClass = (existeNoBanco || jaRegistrado) ? 'input-locked' : '';
             const itemBloqueado = (existeNoBanco || jaRegistrado) ? 'material-bloqueado' : '';
             const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
             const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
-            const estaBaixado = jaRegistrado && material.ativo === false;
+            
+            // ✅ CORREÇÃO: Botão só desabilitado se já estiver baixado (estaBaixado)
+            const botaoBaixaDesabilitado = estaBaixado;
             
             html += `
                 <div class="material-item bobina-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''} ${estaBaixado ? 'item-baixado' : ''}" 
-                     data-codigo="${codigoBobina}" 
-                     data-categoria="bobinas" 
-                     data-tipo="bobina" 
-                     data-id="${idRegistro}" 
-                     data-tombamento="${material.tombamento || ''}"
-                     data-index="${idx}"
-                     data-ja-registrado="${jaRegistrado}"
-                     data-ativo="${material.ativo !== false ? '1' : '0'}">
+                    data-codigo="${codigoBobina}" 
+                    data-categoria="bobinas" 
+                    data-tipo="bobina" 
+                    data-id="${idRegistro}" 
+                    data-tombamento="${material.tombamento || ''}"
+                    data-index="${idx}"
+                    data-ja-registrado="${jaRegistrado}"
+                    data-ativo="${material.ativo !== false ? '1' : '0'}">
                     <div class="material-header">
                         <span class="material-number">Bobina #${idx + 1}</span>
                         <div class="trafo-header-actions">
@@ -1311,7 +1316,7 @@ if (document.getElementById('contagemForm')) {
                             <button type="button" 
                                 class="btn-dar-baixa" 
                                 onclick="abrirModalBaixa('bobina', ${idx}, 'bobina')"
-                                ${jaRegistrado ? 'disabled' : ''}
+                                ${botaoBaixaDesabilitado ? 'disabled' : ''}
                                 ${estaBaixado ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
                                 ${estaBaixado ? '🔴 Baixado' : '🔴 Dar baixa'}
                             </button>
@@ -1421,9 +1426,9 @@ if (document.getElementById('contagemForm')) {
         
         return html;
     }
-    
+
     // ============================================
-    // RENDERIZAR TRAFOS - COM BOTÃO DAR BAIXA
+    // RENDERIZAR TRAFOS - COM BOTÃO DAR BAIXA CORRIGIDO
     // ============================================
 
     function renderizarTrafos(materiais) {
@@ -1460,22 +1465,27 @@ if (document.getElementById('contagemForm')) {
             const idx = index;
             const jaRegistrado = material._jaRegistrado || false;
             
+            // ✅ CORREÇÃO: Verificar se o item está baixado (ativo === false)
+            const estaBaixado = jaRegistrado && material.ativo === false;
+            
             const lockedClass = (existeNoBanco || jaRegistrado) ? 'input-locked' : '';
             const itemBloqueado = (existeNoBanco || jaRegistrado) ? 'material-bloqueado' : '';
             const readonlyAttr = (existeNoBanco || jaRegistrado) ? 'readonly' : '';
             const disabledAttr = (existeNoBanco || jaRegistrado) ? 'disabled' : '';
-            const estaBaixado = jaRegistrado && material.ativo === false;
+            
+            // ✅ CORREÇÃO: Botão só desabilitado se já estiver baixado (estaBaixado)
+            const botaoBaixaDesabilitado = estaBaixado;
             
             html += `
                 <div class="material-item trafo-item ${itemBloqueado} ${jaRegistrado ? 'item-registrado' : ''} ${estaBaixado ? 'item-baixado' : ''}" 
-                     data-codigo="${codigoTrafo}" 
-                     data-categoria="trafos" 
-                     data-tipo="trafo" 
-                     data-id="${idRegistro}" 
-                     data-tombamento="${material.tombamento || ''}"
-                     data-index="${idx}"
-                     data-ja-registrado="${jaRegistrado}"
-                     data-ativo="${material.ativo !== false ? '1' : '0'}">
+                    data-codigo="${codigoTrafo}" 
+                    data-categoria="trafos" 
+                    data-tipo="trafo" 
+                    data-id="${idRegistro}" 
+                    data-tombamento="${material.tombamento || ''}"
+                    data-index="${idx}"
+                    data-ja-registrado="${jaRegistrado}"
+                    data-ativo="${material.ativo !== false ? '1' : '0'}">
                     <div class="material-header">
                         <span class="material-number">Trafo #${idx + 1}</span>
                         <div class="trafo-header-actions">
@@ -1483,7 +1493,7 @@ if (document.getElementById('contagemForm')) {
                             <button type="button" 
                                 class="btn-dar-baixa" 
                                 onclick="abrirModalBaixa('trafo', ${idx}, 'trafo')"
-                                ${jaRegistrado ? 'disabled' : ''}
+                                ${botaoBaixaDesabilitado ? 'disabled' : ''}
                                 ${estaBaixado ? 'style="opacity:0.5;cursor:not-allowed;"' : ''}>
                                 ${estaBaixado ? '🔴 Baixado' : '🔴 Dar baixa'}
                             </button>
