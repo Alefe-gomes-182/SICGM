@@ -2,31 +2,71 @@
 /* RELATÓRIOS - ESTILOS ESPECÍFICOS              */
 /* ============================================ */
 
-/* Container principal - ocupar toda altura */
+/* Container principal */
 .container {
+    width: 100%;
     max-width: 100%;
-    padding: 10px;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+    padding: 15px;
 }
 
 .form-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    padding: 20px 25px;
+    background-color: #FFFFFF;
+    border-radius: 15px;
+    padding: 25px 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid #E8EDF2;
 }
 
-/* Filtros - fixos no topo */
+/* Header */
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.logo-empresa {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.header-container .title {
+    margin-bottom: 0;
+    font-size: 1.4rem;
+    color: #2d3748;
+}
+
+/* Botão Voltar Home */
+.btn-voltar-home {
+    background: #4299E1;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-voltar-home:hover {
+    background: #3182CE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+/* Filtros */
 .filtros-relatorio {
     background: #f7fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 15px 20px;
     margin-bottom: 15px;
-    flex-shrink: 0;
 }
 
 .filtro-row {
@@ -111,13 +151,12 @@
     transform: translateY(-2px);
 }
 
-/* Estatísticas - fixas */
+/* Estatísticas */
 .stats-container {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 10px;
     margin-bottom: 15px;
-    flex-shrink: 0;
 }
 
 .stat-card {
@@ -145,9 +184,8 @@
     color: #2d3748;
 }
 
-/* Divergência Resumo - fixo */
+/* Divergência Resumo */
 .divergencia-resumo {
-    flex-shrink: 0;
     margin-bottom: 15px;
     padding: 12px 20px;
     background: #F7FAFC;
@@ -188,13 +226,9 @@
     color: #ED8936;
 }
 
-/* Tabela Container - ocupa o espaço restante */
+/* Tabela Container */
 .tabela-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    margin-top: 0;
+    margin-top: 15px;
 }
 
 .tabela-header {
@@ -202,7 +236,6 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
-    flex-shrink: 0;
     gap: 10px;
 }
 
@@ -242,14 +275,12 @@
     background: #dd6b20;
 }
 
-/* Table responsive - com altura fixa e rolagem */
+/* Table responsive - com altura limitada e rolagem */
 .table-responsive {
-    flex: 1;
     overflow: auto;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    position: relative;
-    min-height: 200px;
+    max-height: 500px;
 }
 
 /* Tabela com cabeçalho fixo */
@@ -273,7 +304,7 @@
     font-weight: 600;
     color: #4a5568;
     white-space: nowrap;
-    font-size: 0.75em;
+    font-size: 0.7em;
     border-bottom: 2px solid #e2e8f0;
     background: #f7fafc;
 }
@@ -344,51 +375,6 @@
     color: #4a5568;
 }
 
-/* Botão Voltar Home */
-.btn-voltar-home {
-    background: #4299E1;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 13px;
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.btn-voltar-home:hover {
-    background: #3182CE;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
-}
-
-/* Header */
-.header-container {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 15px;
-    margin-bottom: 15px;
-    flex-shrink: 0;
-}
-
-.logo-empresa {
-    width: 50px;
-    height: 50px;
-    object-fit: contain;
-}
-
-.header-container .title {
-    margin-bottom: 0;
-    font-size: 1.3rem;
-    color: #2d3748;
-}
-
 /* Mensagem */
 .mensagem {
     display: none;
@@ -397,7 +383,6 @@
     margin: 10px 0;
     font-weight: 500;
     font-size: 0.9em;
-    flex-shrink: 0;
 }
 
 .mensagem.sucesso {
@@ -523,22 +508,13 @@
         grid-column: span 2;
         justify-content: flex-end;
     }
-    
-    .container {
-        height: auto;
-        min-height: 100vh;
-    }
-    
-    .form-card {
-        overflow: visible;
-    }
-    
-    .table-responsive {
-        min-height: 400px;
-    }
 }
 
 @media (max-width: 768px) {
+    .form-card {
+        padding: 15px 18px;
+    }
+    
     .stats-container {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -598,32 +574,37 @@
         align-items: flex-start !important;
         gap: 8px;
     }
+    
+    .table-responsive {
+        max-height: 400px;
+    }
 }
 
 @media (max-width: 480px) {
-    .stats-container {
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-    }
-    
-    .stat-card {
-        padding: 8px 10px;
-    }
-    
-    .stat-value {
-        font-size: 1.1em;
-    }
-    
-    .stat-label {
-        font-size: 0.55em;
+    .form-card {
+        padding: 10px 12px;
+        border-radius: 10px;
     }
     
     .container {
-        padding: 5px;
+        padding: 8px;
     }
     
-    .form-card {
-        padding: 10px 12px;
+    .stats-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    
+    .stat-card {
+        padding: 6px 8px;
+    }
+    
+    .stat-value {
+        font-size: 1em;
+    }
+    
+    .stat-label {
+        font-size: 0.5em;
     }
     
     .header-container .title {
@@ -633,6 +614,11 @@
     .logo-empresa {
         width: 35px;
         height: 35px;
+    }
+    
+    .header-container {
+        gap: 10px;
+        margin-bottom: 10px;
     }
     
     .filtros-relatorio {
@@ -653,19 +639,48 @@
         min-height: 32px;
     }
     
+    .filtro-row {
+        gap: 8px;
+    }
+    
     #relatorio-tabela {
-        font-size: 0.65em;
-        min-width: 700px;
+        font-size: 0.6em;
+        min-width: 650px;
     }
     
     #relatorio-tabela thead th,
     #relatorio-tabela tbody td {
-        padding: 3px 5px;
-        font-size: 0.6em;
+        padding: 3px 4px;
+        font-size: 0.55em;
     }
     
     .btn-voltar-home {
         font-size: 11px;
         padding: 6px 14px;
+    }
+    
+    .table-responsive {
+        max-height: 350px;
+    }
+    
+    .divergencia-resumo {
+        padding: 10px 15px;
+    }
+    
+    .divergencia-resumo .resumo-item {
+        flex-wrap: wrap;
+    }
+    
+    .divergencia-resumo .resumo-valor {
+        font-size: 1em;
+    }
+    
+    .tabela-header h2 {
+        font-size: 0.85em;
+    }
+    
+    .btn-exportar {
+        font-size: 0.7em;
+        padding: 5px 10px;
     }
 }
