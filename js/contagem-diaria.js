@@ -24,7 +24,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CATEGORIAS DE MATERIAIS - COM MISCELÂNEAS ESPECÍFICAS
+    // CATEGORIAS DE MATERIAIS - COM ESPECÍFICOS
     // ============================================
         
     const CATEGORIAS = {
@@ -75,6 +75,17 @@ if (document.getElementById('contagemForm')) {
                 '90210', '90497', '90498', '90499', '90500',
                 '90641', '90643', '90645', '90510', '90639',
                 '90640', '90567', '90488', '90414', '90415'
+            ],
+            validacao: null
+        },
+        'especificos': {
+            nome: 'Específicos',
+            icone: '🎯',
+            tipo: 'predefinido',
+            tipo_material: 'especifico',
+            codigos: [
+                '690916', '690917', '690001', '690403', 
+                '690312', '616033', '617640'
             ],
             validacao: null
         }
@@ -144,7 +155,7 @@ if (document.getElementById('contagemForm')) {
     function travarItemAposRegistro(itemElement, tipoMaterial) {
         if (!itemElement) return;
         
-        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea') {
+        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea' || tipoMaterial === 'especifico') {
             console.log(`ℹ️ ${tipoMaterial} não são travados após registro`);
             return;
         }
@@ -557,12 +568,12 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA - COM MISCELÂNEAS
+    // FUNÇÃO DE VALIDAÇÃO POR CATEGORIA - COM ESPECÍFICOS
     // ============================================
 
     function validarCodigoPorCategoria(codigo, categoria) {
-        // ✅ MISCELÂNEAS: sempre válido (não precisa de validação específica)
-        if (categoria === 'miscelaneas') {
+        // ✅ MISCELÂNEAS e ESPECÍFICOS: sempre válido (não precisa de validação específica)
+        if (categoria === 'miscelaneas' || categoria === 'especificos') {
             return { valido: true };
         }
         
@@ -683,14 +694,14 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO - COM MISCELÂNEAS
+    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO - COM ESPECÍFICOS
     // ============================================
         
     function itemJaExisteNoBanco(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        // ✅ CONCRETOS e MISCELÂNEAS: verificar apenas por código
-        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea' || !tombamento) {
+        // ✅ CONCRETOS, MISCELÂNEAS e ESPECÍFICOS: verificar apenas por código
+        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea' || tipoMaterial === 'especifico' || !tombamento) {
             const existe = todosRegistrosDB.some(r => 
                 r.codigo === codigo && 
                 r.ativo === 1 &&
@@ -804,7 +815,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ORGANIZAR MATERIAIS POR CATEGORIA - COM MISCELÂNEAS ESPECÍFICAS
+    // ORGANIZAR MATERIAIS POR CATEGORIA - COM ESPECÍFICOS
     // ============================================
         
     function organizarPorCategoria() {
@@ -825,7 +836,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CRIAR SISTEMA DE ABAS - COM MISCELÂNEAS ESPECÍFICAS
+    // CRIAR SISTEMA DE ABAS - COM ESPECÍFICOS
     // ============================================
         
     function criarAbas() {
@@ -837,8 +848,8 @@ if (document.getElementById('contagemForm')) {
         let htmlContent = '';
         let primeiraCategoria = null;
         
-        // Ordem das abas: Concretos, Trafos, Bobinas, Miscelâneas
-        const ordemCategorias = ['concretos', 'trafos', 'bobinas', 'miscelaneas'];
+        // Ordem das abas: Concretos, Trafos, Bobinas, Miscelâneas, Específicos
+        const ordemCategorias = ['concretos', 'trafos', 'bobinas', 'miscelaneas', 'especificos'];
         
         for (const chave of ordemCategorias) {
             const categoria = CATEGORIAS[chave];
@@ -871,6 +882,7 @@ if (document.getElementById('contagemForm')) {
                     ${chave === 'trafos' ? renderizarTrafos(materiais) : 
                       chave === 'bobinas' ? renderizarBobinas(materiais) : 
                       chave === 'miscelaneas' ? renderizarMiscelaneas(materiais) :
+                      chave === 'especificos' ? renderizarEspecificos(materiais) :
                       renderizarMateriaisCategoria(materiais, chave)}
                 </div>
             `;
@@ -917,7 +929,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // RENDERIZAR MATERIAIS PREDEFINIDOS (CONCRETOS E MISCELÂNEAS)
+    // RENDERIZAR MATERIAIS PREDEFINIDOS (CONCRETOS, MISCELÂNEAS E ESPECÍFICOS)
     // ============================================
         
     function renderizarMateriaisCategoria(materiais, categoria) {
@@ -927,6 +939,10 @@ if (document.getElementById('contagemForm')) {
         
         if (categoria === 'miscelaneas') {
             return renderizarMiscelaneas(materiais);
+        }
+        
+        if (categoria === 'especificos') {
+            return renderizarEspecificos(materiais);
         }
         
         if (materiais.length === 0) {
@@ -1364,6 +1380,89 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
+    // RENDERIZAR ESPECÍFICOS
+    // ============================================
+
+    function renderizarEspecificos(materiais) {
+        if (materiais.length === 0) {
+            return `<div style="text-align: center; padding: 30px; color: #A0AEC0;">
+                <p style="font-size: 2em;">🎯</p>
+                <p>Nenhum material específico encontrado</p>
+            </div>`;
+        }
+        
+        let html = '';
+        const tipoMaterial = 'especifico';
+        
+        materiais.forEach((material, index) => {
+            const idUnico = `especificos-${index}`;
+            
+            html += `
+                <div class="material-item especifico-item" 
+                     data-codigo="${material.codigo}" 
+                     data-categoria="especificos" 
+                     data-tipo="${tipoMaterial}" 
+                     data-index="${index}" 
+                     data-tombamento=""
+                     data-ja-registrado="false">
+                    <div class="material-row">
+                        <div class="material-field">
+                            <label>Código</label>
+                            <input type="text" value="${material.codigo}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label>Descrição</label>
+                            <input type="text" value="${material.descricao}" class="input-descricao" readonly>
+                        </div>
+                        <div class="material-field">
+                            <label>UND</label>
+                            <input type="text" value="${material.und}" readonly class="input-readonly">
+                        </div>
+                        <div class="material-field">
+                            <label for="qtd-${idUnico}">QTD *</label>
+                            <input type="number" id="qtd-${idUnico}" step="0.01" min="0" placeholder="0.00" 
+                                class="input-qtd" 
+                                onchange="calcularDiferencaEspecifico('${idUnico}', '${material.codigo}')"
+                                onkeyup="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }"
+                                onblur="if(this.value === '' || this.value === null) { document.getElementById('diferenca-${idUnico}').style.display = 'none'; }">
+                        </div>
+                        <div class="material-field">
+                            <label>Últ. Cont.</label>
+                            <input type="text" id="qtd-anterior-${idUnico}" readonly 
+                                class="input-readonly input-qtd-anterior" value="Carregando...">
+                        </div>
+                    </div>
+                    <div id="diferenca-${idUnico}" class="diferenca-indicador" style="display: none;"></div>
+                    
+                    <div class="concreto-entradas-container" id="concreto-entradas-${idUnico}">
+                        <div class="concreto-entradas-header">
+                            <label>Entradas de Específicos</label>
+                            <button type="button" class="btn-add-concreto-entrada" onclick="adicionarEntradaEspecifico('${idUnico}')">
+                                + Adicionar Entrada
+                            </button>
+                        </div>
+                        <div class="concreto-entradas-list" id="concreto-entradas-list-${idUnico}">
+                        </div>
+                        <div class="concreto-total" id="concreto-total-${idUnico}">
+                            Total: <span id="concreto-total-valor-${idUnico}">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        setTimeout(() => {
+            materiais.forEach((material, index) => {
+                buscarQuantidadeAnterior(material.codigo, `especificos-${index}`, null, 'especifico');
+                const idUnico = `especificos-${index}`;
+                adicionarEntradaEspecifico(idUnico);
+            });
+        }, 100);
+        
+        return html;
+    }
+    
+    // ============================================
     // FUNÇÕES PARA MISCELÂNEAS
     // ============================================
 
@@ -1408,6 +1507,57 @@ if (document.getElementById('contagemForm')) {
     }
 
     function calcularDiferencaMiscelanea(idUnico, codigo) {
+        calcularDiferenca(idUnico, codigo);
+        setTimeout(() => {
+            atualizarTotalConcreto(idUnico);
+        }, 100);
+    }
+    
+    // ============================================
+    // FUNÇÕES PARA ESPECÍFICOS
+    // ============================================
+
+    function adicionarEntradaEspecifico(idUnico) {
+        const listDiv = document.getElementById(`concreto-entradas-list-${idUnico}`);
+        if (!listDiv) return;
+        
+        const entradaId = `entrada-esp-${idUnico}-${Date.now()}`;
+        
+        const entradaDiv = document.createElement('div');
+        entradaDiv.className = 'concreto-entrada-item';
+        entradaDiv.id = entradaId;
+        entradaDiv.innerHTML = `
+            <div class="concreto-entrada-fields">
+                <div class="material-field">
+                    <label>Tipo</label>
+                    <select class="concreto-entrada-tipo" onchange="toggleConcretoEntradaFields('${entradaId}')">
+                        <option value="n_obra">N Obra</option>
+                        <option value="recebimento">Recebimento</option>
+                    </select>
+                </div>
+                <div class="material-field concreto-entrada-valor-field">
+                    <label>Nº Obra</label>
+                    <input type="text" class="concreto-entrada-valor" placeholder="Número da obra..." 
+                        onchange="validarConcretoEntrada('${idUnico}', '${entradaId}')">
+                </div>
+                <div class="material-field concreto-entrada-qtd-field" style="display: block;">
+                    <label>QTD Saída (-)</label>
+                    <input type="number" step="0.01" class="concreto-entrada-qtd" placeholder="0.00" 
+                        onchange="validarConcretoEntrada('${idUnico}', '${entradaId}')">
+                </div>
+                <button type="button" class="btn-remover-entrada" onclick="removerEntradaConcreto('${idUnico}', '${entradaId}')">✕</button>
+            </div>
+        `;
+        
+        listDiv.appendChild(entradaDiv);
+        
+        const qtdPrincipal = document.getElementById(`qtd-${idUnico}`);
+        if (qtdPrincipal && qtdPrincipal.value !== '' && qtdPrincipal.value !== null) {
+            atualizarTotalConcreto(idUnico);
+        }
+    }
+
+    function calcularDiferencaEspecifico(idUnico, codigo) {
         calcularDiferenca(idUnico, codigo);
         setTimeout(() => {
             atualizarTotalConcreto(idUnico);
@@ -2504,7 +2654,7 @@ if (document.getElementById('contagemForm')) {
         if (!inputAnterior || !codigo) return;
         
         let cacheKey = codigo;
-        if (tipoMaterial && tipoMaterial !== 'concreto' && tipoMaterial !== 'miscelanea' && tombamento && tombamento !== '') {
+        if (tipoMaterial && tipoMaterial !== 'concreto' && tipoMaterial !== 'miscelanea' && tipoMaterial !== 'especifico' && tombamento && tombamento !== '') {
             cacheKey = `${codigo}_${tombamento}`;
         }
         
@@ -2528,7 +2678,7 @@ if (document.getElementById('contagemForm')) {
                 tipo_material: tipoMaterial || 'concreto'
             };
             
-            if (tipoMaterial && tipoMaterial !== 'concreto' && tipoMaterial !== 'miscelanea' && tombamento && tombamento !== '') {
+            if (tipoMaterial && tipoMaterial !== 'concreto' && tipoMaterial !== 'miscelanea' && tipoMaterial !== 'especifico' && tombamento && tombamento !== '') {
                 body.tombamento = tombamento;
             }
             
@@ -2703,14 +2853,14 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR DUPLICATA - COM MISCELÂNEAS
+    // VERIFICAR DUPLICATA - COM ESPECÍFICOS
     // ============================================
         
     function verificarDuplicata(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
-        // ✅ CONCRETOS e MISCELÂNEAS: SEMPRE retorna false (nunca bloqueia)
-        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea') {
+        // ✅ CONCRETOS, MISCELÂNEAS e ESPECÍFICOS: SEMPRE retorna false (nunca bloqueia)
+        if (tipoMaterial === 'concreto' || tipoMaterial === 'miscelanea' || tipoMaterial === 'especifico') {
             console.log(`✅ ${tipoMaterial} ${codigo} - duplicata PERMITIDA (contagens múltiplas)`);
             return false;
         }
@@ -3303,6 +3453,128 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
+        // ESPECÍFICOS - VALIDAÇÃO NO ENVIO
+        const especificoItems = document.querySelectorAll('.especifico-item');
+        especificoItems.forEach((item) => {
+            const index = parseInt(item.dataset.index);
+            if (isNaN(index)) return;
+            
+            const idUnico = `especificos-${index}`;
+            const qtdInput = document.getElementById(`qtd-${idUnico}`);
+            if (!qtdInput) return;
+            
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
+                return;
+            }
+            
+            const qtdAtual = parseFloat(qtdInput.value) || 0;
+            const codigo = item.dataset.codigo;
+            
+            if (!itemFoiModificado(qtdInput, item)) {
+                console.log(`⏭️ Específico ${codigo} não foi modificado - pulando`);
+                return;
+            }
+            
+            if (qtdAtual === 0) {
+                return;
+            }
+            
+            // ✅ ESPECÍFICOS: NÃO VERIFICA DUPLICATA (permite múltiplas contagens)
+            console.log(`✅ Específico ${codigo} - novo registro permitido (contagem múltipla)`);
+            
+            // Verificar se há entradas preenchidas
+            const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
+            let temEntradaValida = false;
+            let justificativaCompleta = '';
+            
+            entradaItems.forEach(entradaItem => {
+                const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
+                const valor = entradaItem.querySelector('.concreto-entrada-valor')?.value || '';
+                const qtdEntrada = parseFloat(entradaItem.querySelector('.concreto-entrada-qtd')?.value) || 0;
+                
+                if (valor && qtdEntrada !== 0) {
+                    temEntradaValida = true;
+                    const tipoLabel = tipo === 'n_obra' ? 'Nº Obra' : 'Nº Recebimento';
+                    justificativaCompleta += `${tipoLabel}: ${valor} (${qtdEntrada > 0 ? '+' : ''}${qtdEntrada.toFixed(2)}) `;
+                }
+            });
+            
+            const temContagemAnterior = item.dataset.temContagemAnterior === 'true';
+            const justificativaCampo = document.getElementById(`justificativa-${idUnico}`)?.value || '';
+            
+            // Se tem contagem anterior, precisa de justificativa
+            if (temContagemAnterior) {
+                const justificativa = justificativaCampo.trim() || justificativaCompleta.trim();
+                
+                if (!justificativa) {
+                    const descricaoMaterial = item.querySelector('.input-descricao')?.value || codigo;
+                    mostrarToast(`❌ É necessário adicionar entradas (Nº Obra ou Recebimento) ou preencher a justificativa para ${descricaoMaterial}!`, 'erro');
+                    
+                    const entradasContainer = document.getElementById(`concreto-entradas-${idUnico}`);
+                    if (entradasContainer) {
+                        entradasContainer.style.borderColor = '#FC8181';
+                        entradasContainer.style.borderWidth = '2px';
+                        entradasContainer.style.borderStyle = 'solid';
+                        setTimeout(() => {
+                            entradasContainer.style.borderColor = '#e2e8f0';
+                            entradasContainer.style.borderWidth = '1px';
+                        }, 3000);
+                    }
+                    
+                    const justificativaInput = document.getElementById(`justificativa-${idUnico}`);
+                    if (justificativaInput) {
+                        justificativaInput.classList.add('input-error');
+                        justificativaInput.focus();
+                        setTimeout(() => justificativaInput.classList.remove('input-error'), 3000);
+                    }
+                    
+                    temErroValidacao = true;
+                    return;
+                }
+            }
+            
+            // Coletar entradas
+            const entradas = [];
+            entradaItems.forEach(entradaItem => {
+                const tipo = entradaItem.querySelector('.concreto-entrada-tipo')?.value || '';
+                const valor = entradaItem.querySelector('.concreto-entrada-valor')?.value || '';
+                const qtdEntrada = parseFloat(entradaItem.querySelector('.concreto-entrada-qtd')?.value) || 0;
+                
+                if (valor && qtdEntrada !== 0) {
+                    entradas.push({
+                        tipo: tipo,
+                        valor: valor,
+                        qtd: qtdEntrada
+                    });
+                }
+            });
+            
+            const materiaisDaCategoria = materiaisPorCategoria['especificos'] || [];
+            const material = materiaisDaCategoria.find(m => m.codigo === codigo);
+            
+            if (material) {
+                const obsFinal = justificativaCompleta.trim() || justificativaCampo.trim() || (temContagemAnterior ? '' : 'Primeira contagem - sem justificativa');
+                
+                materiaisParaEnviar.push({
+                    nome, matricula, data,
+                    codigo: material.codigo,
+                    descricao: material.descricao,
+                    und: material.und,
+                    qtd: qtdAtual,
+                    numero_serie: null,
+                    tombamento: null,
+                    oleo: null,
+                    cor: null,
+                    n_obra: '',
+                    ativo: 1,
+                    tipo_material: 'especifico',
+                    entradas_concreto: entradas,
+                    obs: obsFinal
+                });
+                console.log(`✅ Específico ${codigo} adicionado para envio. QTD: ${qtdAtual}, Justificativa: ${obsFinal}`);
+            }
+        });
+        
         if (temErroValidacao || temDuplicata) {
             if (temDuplicata) {
                 mostrarToast('❌ Um ou mais itens já estão registrados no banco! Verifique os itens destacados.', 'erro');
@@ -3394,6 +3666,7 @@ if (document.getElementById('contagemForm')) {
     window.calcularDiferencaTrafo = calcularDiferencaTrafo;
     window.calcularDiferencaConcreto = calcularDiferencaConcreto;
     window.calcularDiferencaMiscelanea = calcularDiferencaMiscelanea;
+    window.calcularDiferencaEspecifico = calcularDiferencaEspecifico;
     window.buscarQuantidadeAnterior = buscarQuantidadeAnterior;
     window.formatarData = formatarData;
     window.mostrarMensagem = mostrarMensagem;
@@ -3410,6 +3683,7 @@ if (document.getElementById('contagemForm')) {
     window.verificarNObraBobina = verificarNObraBobina;
     window.adicionarEntradaConcreto = adicionarEntradaConcreto;
     window.adicionarEntradaMiscelanea = adicionarEntradaMiscelanea;
+    window.adicionarEntradaEspecifico = adicionarEntradaEspecifico;
     window.toggleConcretoEntradaFields = toggleConcretoEntradaFields;
     window.removerEntradaConcreto = removerEntradaConcreto;
     window.validarConcretoEntrada = validarConcretoEntrada;

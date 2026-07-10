@@ -8,6 +8,22 @@
     <link rel="stylesheet" href="../css/relatorios.css">
 </head>
 <body>
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O TOPO (FIXO NO CANTO)        -->
+    <!-- ============================================ -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O FIM (FIXO NO CANTO)         -->
+    <!-- ============================================ -->
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
     <div class="container">
         <div class="form-card">
             
@@ -42,6 +58,8 @@
                             <option value="trafo">Trafos</option>
                             <option value="bobina">Bobinas</option>
                             <option value="concreto">Concretos</option>
+                            <option value="miscelanea">Miscelâneas</option>
+                            <option value="especifico">Específicos</option>
                         </select>
                     </div>
                     <div class="filtro-group">
@@ -83,6 +101,24 @@
                 </div>
             </div>
 
+            <!-- Resumo de Divergências -->
+            <div class="divergencia-resumo" id="divergencia-resumo" style="display: none; background: #F7FAFC; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; border: 2px solid #E2E8F0;">
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between; align-items: center;">
+                    <div>
+                        <span style="font-weight: 600; color: #2D3748;">💰 Valor Total da Divergência:</span>
+                        <span id="total-divergencia-valor" style="font-size: 1.4em; font-weight: 700; color: #E53E3E; margin-left: 10px;">R$ 0,00</span>
+                    </div>
+                    <div>
+                        <span style="font-weight: 600; color: #2D3748;">📦 Total em Divergência:</span>
+                        <span id="total-divergencia-qtd" style="font-size: 1.2em; font-weight: 700; color: #ED8936; margin-left: 10px;">0</span>
+                    </div>
+                    <div>
+                        <span style="font-weight: 600; color: #2D3748;">📊 Itens com Divergência:</span>
+                        <span id="total-itens-divergentes" style="font-size: 1.2em; font-weight: 700; color: #E53E3E; margin-left: 10px;">0</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tabela de Relatório -->
             <div class="tabela-container">
                 <div class="tabela-header">
@@ -105,6 +141,9 @@
                                 <th>Tipo</th>
                                 <th>QTD Física</th>
                                 <th>Saldo Sistêmico</th>
+                                <th>Divergência QTD</th>
+                                <th>Valor Unitário</th>
+                                <th>Valor Divergência</th>
                                 <th>Acuracidade</th>
                                 <th>Bobinas Únicas</th>
                                 <th>Último Usuário</th>
@@ -113,7 +152,7 @@
                         </thead>
                         <tbody id="relatorio-body">
                             <tr>
-                                <td colspan="10" class="text-center">Nenhum dado encontrado</td>
+                                <td colspan="13" class="text-center">Nenhum dado encontrado</td>
                             </tr>
                         </tbody>
                     </table>

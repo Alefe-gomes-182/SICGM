@@ -207,7 +207,7 @@ async function carregarPosicaoEstoque() {
             // Separar por tabulação
             const partes = linha.split('\t');
             
-            // Verificar se tem pelo menos 7 colunas (como no exemplo)
+            // Verificar se tem pelo menos 5 colunas
             if (partes.length >= 5) {
                 // Mapeamento correto das colunas:
                 // 0: codmat, 1: dscmat, 2: codund_mda_mat, 3: vlrult_cot, 4: saldo_oper
@@ -862,6 +862,47 @@ function exportarPDF() {
 }
 
 // ============================================
+// FUNÇÕES DE NAVEGAÇÃO - TOPO E FIM
+// ============================================
+
+function irParaTopo() {
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+function irParaFim() {
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+    });
+}
+
+function controlarBotoesNavegacao() {
+    const btnTopo = document.getElementById('btnTopo');
+    const btnFim = document.getElementById('btnFim');
+    
+    if (!btnTopo || !btnFim) return;
+    
+    const scrollY = window.scrollY;
+    const alturaTotal = document.body.scrollHeight;
+    const alturaVisivel = window.innerHeight;
+    
+    if (scrollY > 200) {
+        btnTopo.classList.add('visivel');
+    } else {
+        btnTopo.classList.remove('visivel');
+    }
+    
+    if (scrollY + alturaVisivel < alturaTotal - 100) {
+        btnFim.classList.add('visivel');
+    } else {
+        btnFim.classList.remove('visivel');
+    }
+}
+
+// ============================================
 // INICIALIZAR
 // ============================================
 
@@ -874,6 +915,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     
     console.log('🚀 Inicializando página de relatórios...');
+    
+    // Inicializar botões de navegação
+    window.addEventListener('scroll', controlarBotoesNavegacao);
+    window.addEventListener('load', function() {
+        setTimeout(controlarBotoesNavegacao, 500);
+    });
+    window.addEventListener('resize', controlarBotoesNavegacao);
     
     // Carregar posição de estoque
     await carregarPosicaoEstoque();
@@ -891,3 +939,6 @@ window.limparFiltros = limparFiltros;
 window.exportarExcel = exportarExcel;
 window.exportarPDF = exportarPDF;
 window.redirecionarParaHome = redirecionarParaHome;
+window.irParaTopo = irParaTopo;
+window.irParaFim = irParaFim;
+window.controlarBotoesNavegacao = controlarBotoesNavegacao;

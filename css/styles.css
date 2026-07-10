@@ -2898,3 +2898,16 @@ body {
 .miscelanea-item {
     border-left: 4px solid #ECC94B;
 }
+
+/* ============================================ */
+/* BADGE ESPECÍFICOS                            */
+/* ============================================ */
+
+.badge-especifico {
+    background: #E9D8FD;
+    color: #553C9A;
+}
+
+.especifico-item {
+    border-left: 4px solid #805AD5;
+}
