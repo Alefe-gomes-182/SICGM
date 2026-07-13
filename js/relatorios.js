@@ -5,6 +5,14 @@
 const API_URL = 'https://noisy-snow-0359.alefe-gomes-72f.workers.dev';
 
 // ============================================
+// VARIÁVEIS GLOBAIS
+// ============================================
+
+let perfilUsuario = 'OPERACIONAL'; // Padrão
+let dadosCompletos = [];
+let dadosProcessados = [];
+
+// ============================================
 // FUNÇÃO PARA REDIRECIONAR PARA HOME
 // ============================================
 
@@ -177,7 +185,6 @@ async function carregarPosicaoEstoque() {
     try {
         console.log('🔄 Carregando posição de estoque...');
         
-        // Caminho relativo para o arquivo na pasta data
         const response = await fetch('../data/posicao-de-estoque.txt');
         
         if (!response.ok) {
@@ -196,26 +203,19 @@ async function carregarPosicaoEstoque() {
         
         console.log(`📄 Arquivo carregado: ${linhas.length} linhas`);
         
-        // O cabeçalho é: "codmat	dscmat	codund_mda_mat	vlrult_cot	saldo_oper"
-        // Pular a primeira linha (cabeçalho)
         let linhasProcessadas = 0;
         
         for (let i = 1; i < linhas.length; i++) {
             const linha = linhas[i].trim();
             if (!linha) continue;
             
-            // Separar por tabulação
             const partes = linha.split('\t');
             
-            // Verificar se tem pelo menos 5 colunas
             if (partes.length >= 5) {
-                // Mapeamento correto das colunas:
-                // 0: codmat, 1: dscmat, 2: codund_mda_mat, 3: vlrult_cot, 4: saldo_oper
                 const codmat = partes[0].trim();
                 const dscmat = partes[1]?.trim() || '';
                 const codund = partes[2]?.trim() || '';
                 
-                // Converter valor (pode vir com vírgula decimal)
                 let vlrultCot = 0;
                 try {
                     const valorStr = partes[3]?.trim().replace(',', '.') || '0';
@@ -246,7 +246,6 @@ async function carregarPosicaoEstoque() {
         }
         
         console.log(`📦 Posição de estoque carregada: ${linhasProcessadas} códigos`);
-        console.log(`📊 Exemplo dos primeiros 3 itens:`, Object.values(posicaoEstoque).slice(0, 3));
         
         if (linhasProcessadas === 0) {
             mostrarToast('⚠️ Nenhum dado válido encontrado no arquivo de estoque', 'aviso');
@@ -299,7 +298,6 @@ function processarDados(dados, filtros) {
     
     // Aplicar filtros
     if (filtros) {
-        // Filtro de data
         if (filtros.dataInicio) {
             const dataInicio = new Date(filtros.dataInicio + 'T00:00:00');
             dadosFiltrados = dadosFiltrados.filter(item => {
@@ -316,14 +314,12 @@ function processarDados(dados, filtros) {
             });
         }
         
-        // Filtro de tipo de material
         if (filtros.tipoMaterial) {
             dadosFiltrados = dadosFiltrados.filter(item => 
                 item.tipo_material === filtros.tipoMaterial
             );
         }
         
-        // Filtro de código
         if (filtros.codigo && filtros.codigo.trim()) {
             const codigoBusca = filtros.codigo.trim();
             dadosFiltrados = dadosFiltrados.filter(item => 
@@ -355,12 +351,10 @@ function processarDados(dados, filtros) {
         grupos[codigo].quantidade_total += parseFloat(item.qtd) || 0;
         grupos[codigo].registros.push(item);
         
-        // Para bobinas, adicionar tombamento ao set de únicos
         if (item.tipo_material === 'bobina' && item.tombamento) {
             grupos[codigo].bobinas_unicas.add(item.tombamento);
         }
         
-        // Atualizar última contagem
         const dataItem = new Date(item.created_at || item.data);
         if (!grupos[codigo].ultima_data || dataItem > new Date(grupos[codigo].ultima_data)) {
             grupos[codigo].ultima_contagem = item.qtd;
@@ -369,11 +363,51 @@ function processarDados(dados, filtros) {
         }
     });
     
-    // Converter para array e ordenar por código
     const resultado = Object.values(grupos);
     resultado.sort((a, b) => a.codigo.localeCompare(b.codigo));
     
     return resultado;
+}
+
+// ============================================
+// DEFINIR COLUNAS POR PERFIL
+// ============================================
+
+function getColunasPorPerfil() {
+    // Colunas completas para GESTÃO
+    const colunasCompletas = [
+        { key: 'codigo', label: 'Código', width: 'auto' },
+        { key: 'descricao', label: 'Descrição', width: 'auto' },
+        { key: 'und', label: 'UND', width: 'auto' },
+        { key: 'tipo', label: 'Tipo', width: 'auto' },
+        { key: 'qtd_fisica', label: 'QTD Física', width: 'auto' },
+        { key: 'saldo_sistemico', label: 'Saldo Sistêmico', width: 'auto' },
+        { key: 'divergencia_qtd', label: 'Divergência QTD', width: 'auto' },
+        { key: 'valor_unitario', label: 'Valor Unitário', width: 'auto' },
+        { key: 'valor_divergencia', label: 'Valor Divergência', width: 'auto' },
+        { key: 'acuracidade', label: 'Acuracidade', width: 'auto' },
+        { key: 'bobinas_unicas', label: 'Bobinas Únicas', width: 'auto' },
+        { key: 'ultimo_usuario', label: 'Último Usuário', width: 'auto' },
+        { key: 'ultima_data', label: 'Data da Última', width: 'auto' }
+    ];
+    
+    // Colunas reduzidas para OPERACIONAL e VISUALIZACAO
+    const colunasReduzidas = [
+        { key: 'codigo', label: 'Código', width: 'auto' },
+        { key: 'descricao', label: 'Descrição', width: 'auto' },
+        { key: 'und', label: 'UND', width: 'auto' },
+        { key: 'tipo', label: 'Tipo', width: 'auto' },
+        { key: 'qtd_fisica', label: 'QTD Física', width: 'auto' },
+        { key: 'bobinas_unicas', label: 'Bobinas Únicas', width: 'auto' },
+        { key: 'ultimo_usuario', label: 'Último Usuário', width: 'auto' },
+        { key: 'ultima_data', label: 'Data da Última', width: 'auto' }
+    ];
+    
+    if (perfilUsuario === 'GESTAO') {
+        return colunasCompletas;
+    }
+    
+    return colunasReduzidas;
 }
 
 // ============================================
@@ -384,6 +418,7 @@ function renderizarRelatorio(dados) {
     const tbody = document.getElementById('relatorio-body');
     const loading = document.getElementById('loading-relatorio');
     const resumoDiv = document.getElementById('divergencia-resumo');
+    const thead = document.querySelector('#relatorio-tabela thead');
     
     if (loading) loading.style.display = 'none';
     
@@ -397,6 +432,19 @@ function renderizarRelatorio(dados) {
         return;
     }
     
+    // Determinar colunas baseado no perfil
+    const colunas = getColunasPorPerfil();
+    const isGestao = perfilUsuario === 'GESTAO';
+    
+    // Renderizar cabeçalho
+    let headerHtml = '<tr>';
+    colunas.forEach(col => {
+        headerHtml += `<th>${col.label}</th>`;
+    });
+    headerHtml += '</tr>';
+    thead.innerHTML = headerHtml;
+    
+    // Renderizar corpo
     let html = '';
     let totalDivergenciaQtd = 0;
     let totalDivergenciaValor = 0;
@@ -407,24 +455,19 @@ function renderizarRelatorio(dados) {
         const badgeClass = `badge-${item.tipo_material}`;
         const tipoLabel = item.tipo_material.charAt(0).toUpperCase() + item.tipo_material.slice(1);
         
-        // Buscar dados da posição de estoque
         const estoque = getPosicaoEstoque(item.codigo);
         const saldoSistemico = estoque ? estoque.saldo_sistemico : 0;
         const valorUnitario = estoque ? estoque.valor_unitario : 0;
         const descricaoEstoque = estoque ? estoque.descricao : '';
         const undEstoque = estoque ? estoque.und : '';
         
-        // Usar descrição do estoque se disponível, senão a do banco
         const descricaoFinal = descricaoEstoque || item.descricao || item.codigo;
         const undFinal = undEstoque || item.und || '-';
-        
         const saldoFisico = item.quantidade_total;
         
-        // Calcular divergência
         const divergenciaQtd = saldoFisico - saldoSistemico;
         const divergenciaValor = divergenciaQtd * valorUnitario;
         
-        // Acumular totais
         if (divergenciaQtd !== 0) {
             totalDivergenciaQtd += divergenciaQtd;
             totalDivergenciaValor += divergenciaValor;
@@ -437,7 +480,6 @@ function renderizarRelatorio(dados) {
             });
         }
         
-        // Calcular acuracidade
         let acuracidade = '-';
         if (saldoSistemico > 0) {
             const diferenca = Math.abs(saldoFisico - saldoSistemico);
@@ -453,13 +495,11 @@ function renderizarRelatorio(dados) {
             }
         }
         
-        // Contar bobinas únicas
         let bobinasUnicasCount = '-';
         if (item.tipo_material === 'bobina' && item.bobinas_unicas) {
             bobinasUnicasCount = item.bobinas_unicas.size;
         }
         
-        // Cor da divergência
         let divergenciaQtdDisplay = divergenciaQtd.toFixed(2);
         let divergenciaValorDisplay = formatarMoeda(divergenciaValor);
         
@@ -471,40 +511,74 @@ function renderizarRelatorio(dados) {
             divergenciaValorDisplay = `<span style="color: #FC8181; font-weight: 600;">${formatarMoeda(divergenciaValor)}</span>`;
         }
         
-        // Valor unitário
         const valorUnitarioDisplay = valorUnitario > 0 ? formatarMoeda(valorUnitario) : '-';
         
-        html += `
-            <tr>
-                <td><strong>${item.codigo}</strong></td>
-                <td>${descricaoFinal}</td>
-                <td>${undFinal}</td>
-                <td><span class="badge-tipo ${badgeClass}">${tipoLabel}</span></td>
-                <td><strong>${saldoFisico.toFixed(2)}</strong></td>
-                <td>${saldoSistemico.toFixed(2)}</td>
-                <td>${divergenciaQtdDisplay}</td>
-                <td>${valorUnitarioDisplay}</td>
-                <td>${divergenciaValorDisplay}</td>
-                <td>${acuracidade}</td>
-                <td>${bobinasUnicasCount}</td>
-                <td>${item.ultimo_usuario || '-'}</td>
-                <td>${formatarDataHora(item.ultima_data)}</td>
-            </tr>
-        `;
+        // Construir linha baseada nas colunas
+        let rowHtml = '<tr>';
+        
+        colunas.forEach(col => {
+            let cellContent = '';
+            
+            switch (col.key) {
+                case 'codigo':
+                    cellContent = `<strong>${item.codigo}</strong>`;
+                    break;
+                case 'descricao':
+                    cellContent = descricaoFinal;
+                    break;
+                case 'und':
+                    cellContent = undFinal;
+                    break;
+                case 'tipo':
+                    cellContent = `<span class="badge-tipo ${badgeClass}">${tipoLabel}</span>`;
+                    break;
+                case 'qtd_fisica':
+                    cellContent = `<strong>${saldoFisico.toFixed(2)}</strong>`;
+                    break;
+                case 'saldo_sistemico':
+                    cellContent = isGestao ? saldoSistemico.toFixed(2) : '-';
+                    break;
+                case 'divergencia_qtd':
+                    cellContent = isGestao ? divergenciaQtdDisplay : '-';
+                    break;
+                case 'valor_unitario':
+                    cellContent = isGestao ? valorUnitarioDisplay : '-';
+                    break;
+                case 'valor_divergencia':
+                    cellContent = isGestao ? divergenciaValorDisplay : '-';
+                    break;
+                case 'acuracidade':
+                    cellContent = isGestao ? acuracidade : '-';
+                    break;
+                case 'bobinas_unicas':
+                    cellContent = bobinasUnicasCount;
+                    break;
+                case 'ultimo_usuario':
+                    cellContent = item.ultimo_usuario || '-';
+                    break;
+                case 'ultima_data':
+                    cellContent = formatarDataHora(item.ultima_data);
+                    break;
+                default:
+                    cellContent = '-';
+            }
+            
+            rowHtml += `<td>${cellContent}</td>`;
+        });
+        
+        rowHtml += '</tr>';
+        html += rowHtml;
     });
     
     tbody.innerHTML = html;
     
-    // Atualizar resumo de divergências
+    // Atualizar resumo de divergências (apenas para GESTÃO)
     if (resumoDiv) {
-        if (totalItensDivergentes > 0) {
+        if (isGestao && totalItensDivergentes > 0) {
             resumoDiv.style.display = 'block';
             document.getElementById('total-divergencia-valor').textContent = formatarMoeda(totalDivergenciaValor);
             document.getElementById('total-divergencia-qtd').textContent = totalDivergenciaQtd.toFixed(2);
             document.getElementById('total-itens-divergentes').textContent = totalItensDivergentes;
-            
-            // Log dos itens divergentes para debug
-            console.log('📊 Itens com divergência:', itensComDivergencia);
         } else {
             resumoDiv.style.display = 'none';
         }
@@ -516,14 +590,10 @@ function renderizarRelatorio(dados) {
 // ============================================
 
 function atualizarEstatisticas(dados, dadosBrutos) {
-    // Total de registros ativos
     const totalRegistros = dadosBrutos ? dadosBrutos.filter(i => i.ativo === 1 || i.ativo === true).length : 0;
     document.getElementById('total-registros').textContent = totalRegistros;
-    
-    // Códigos únicos
     document.getElementById('total-codigos').textContent = dados ? dados.length : 0;
     
-    // Última contagem
     if (dadosBrutos && dadosBrutos.length > 0) {
         const ativos = dadosBrutos.filter(i => i.ativo === 1 || i.ativo === true);
         if (ativos.length > 0) {
@@ -536,21 +606,17 @@ function atualizarEstatisticas(dados, dadosBrutos) {
         }
     }
     
-    // Total por tipo de material
     if (dadosBrutos) {
         const ativos = dadosBrutos.filter(i => i.ativo === 1 || i.ativo === true);
         
-        // Trafos
         const trafos = ativos.filter(i => i.tipo_material === 'trafo');
         const totalTrafos = trafos.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
         document.getElementById('total-trafos').textContent = totalTrafos.toFixed(0);
         
-        // Bobinas
         const bobinas = ativos.filter(i => i.tipo_material === 'bobina');
         const totalBobinas = bobinas.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
         document.getElementById('total-bobinas').textContent = totalBobinas.toFixed(0);
         
-        // Concretos
         const concretos = ativos.filter(i => i.tipo_material === 'concreto');
         const totalConcretos = concretos.reduce((sum, item) => sum + (parseFloat(item.qtd) || 0), 0);
         document.getElementById('total-concretos').textContent = totalConcretos.toFixed(0);
@@ -566,7 +632,6 @@ async function carregarRelatorios() {
     if (loading) loading.style.display = 'block';
     
     try {
-        // Buscar dados do banco
         const dadosBrutos = await carregarDados();
         
         if (!dadosBrutos || dadosBrutos.length === 0) {
@@ -575,7 +640,6 @@ async function carregarRelatorios() {
             return;
         }
         
-        // Coletar filtros
         const filtros = {
             dataInicio: document.getElementById('filtro-data-inicio')?.value || '',
             dataFim: document.getElementById('filtro-data-fim')?.value || '',
@@ -583,10 +647,9 @@ async function carregarRelatorios() {
             codigo: document.getElementById('filtro-codigo')?.value || ''
         };
         
-        // Processar dados
-        const dadosProcessados = processarDados(dadosBrutos, filtros);
+        dadosProcessados = processarDados(dadosBrutos, filtros);
+        dadosCompletos = dadosBrutos;
         
-        // Renderizar
         renderizarRelatorio(dadosProcessados);
         atualizarEstatisticas(dadosProcessados, dadosBrutos);
         
@@ -620,6 +683,8 @@ function limparFiltros() {
 function exportarExcel() {
     const tbody = document.getElementById('relatorio-body');
     const linhas = tbody.querySelectorAll('tr');
+    const colunas = getColunasPorPerfil();
+    const isGestao = perfilUsuario === 'GESTAO';
     
     if (linhas.length === 0 || linhas[0].textContent.includes('Nenhum dado')) {
         mostrarToast('⚠️ Não há dados para exportar', 'aviso');
@@ -660,22 +725,11 @@ function exportarExcel() {
             <body>
                 <h2>📊 Relatório de Contagem - SICGM</h2>
                 <p>Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+                <p>Perfil: ${perfilUsuario}</p>
                 <table>
                     <thead>
                         <tr>
-                            <th>Código</th>
-                            <th>Descrição</th>
-                            <th>UND</th>
-                            <th>Tipo</th>
-                            <th>QTD Física</th>
-                            <th>Saldo Sistêmico</th>
-                            <th>Divergência QTD</th>
-                            <th>Valor Unitário</th>
-                            <th>Valor Divergência</th>
-                            <th>Acuracidade</th>
-                            <th>Bobinas Únicas</th>
-                            <th>Último Usuário</th>
-                            <th>Data da Última</th>
+                            ${colunas.map(col => `<th>${col.label}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
@@ -685,23 +739,22 @@ function exportarExcel() {
         let totalDivergenciaValor = 0;
         
         linhas.forEach(linha => {
-            const colunas = linha.querySelectorAll('td');
-            if (colunas.length > 0 && !linha.textContent.includes('Nenhum dado')) {
+            const colunasTd = linha.querySelectorAll('td');
+            if (colunasTd.length > 0 && !linha.textContent.includes('Nenhum dado')) {
                 let valores = [];
-                colunas.forEach(col => {
+                colunasTd.forEach(col => {
                     let texto = col.textContent.trim();
                     texto = texto.replace(/<[^>]*>/g, '').trim();
                     texto = texto.replace(/[▲▼+]/g, '').trim();
                     valores.push(texto);
                 });
                 
-                // Tentar extrair divergência para total
-                if (valores.length >= 9) {
-                    const divText = valores[6].trim().replace(/[^0-9,.-]/g, '');
+                if (isGestao && valores.length >= 9) {
+                    const divText = valores[6]?.trim().replace(/[^0-9,.-]/g, '') || '0';
                     const divValor = parseFloat(divText.replace(',', '.')) || 0;
                     totalDivergenciaQtd += divValor;
                     
-                    const valText = valores[8].trim().replace(/[^0-9,.-]/g, '');
+                    const valText = valores[8]?.trim().replace(/[^0-9,.-]/g, '') || '0';
                     const valValor = parseFloat(valText.replace(',', '.')) || 0;
                     totalDivergenciaValor += valValor;
                 }
@@ -710,8 +763,9 @@ function exportarExcel() {
             }
         });
         
-        // Linha de total
-        htmlContent += `
+        // Linha de total (apenas para GESTÃO)
+        if (isGestao) {
+            htmlContent += `
                     </tbody>
                     <tfoot>
                         <tr class="total-row">
@@ -722,6 +776,10 @@ function exportarExcel() {
                             <td colspan="4"></td>
                         </tr>
                     </tfoot>
+            `;
+        }
+        
+        htmlContent += `
                 </table>
                 <br>
                 <p style="font-size: 10px; color: #718096;">
@@ -781,7 +839,7 @@ function exportarPDF() {
             📊 Relatório de Contagem - SICGM
             <br>
             <span style="font-size: 12px; font-weight: 400; color: #718096;">
-                Gerado em: ${new Date().toLocaleString('pt-BR')}
+                Gerado em: ${new Date().toLocaleString('pt-BR')} | Perfil: ${perfilUsuario}
             </span>
         `;
         
@@ -907,26 +965,67 @@ function controlarBotoesNavegacao() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Verificar sessão
     const sessao = sessionStorage.getItem('sessaoSICGM');
     if (!sessao) {
         window.location.href = '../index.html';
         return;
     }
     
+    try {
+        const dadosSessao = JSON.parse(sessao);
+        perfilUsuario = dadosSessao.perfil || 'OPERACIONAL';
+        console.log(`👤 Perfil do usuário: ${perfilUsuario}`);
+        
+        // Mostrar badge de perfil no título
+        const perfilBadge = document.createElement('span');
+        perfilBadge.style.cssText = `
+            display: inline-block;
+            background: ${perfilUsuario === 'GESTAO' ? '#48BB78' : perfilUsuario === 'OPERACIONAL' ? '#4299E1' : '#ED8936'};
+            color: white;
+            padding: 2px 12px;
+            border-radius: 12px;
+            font-size: 0.6em;
+            font-weight: 600;
+            margin-left: 10px;
+            vertical-align: middle;
+        `;
+        perfilBadge.textContent = perfilUsuario;
+        
+        const title = document.querySelector('.header-container .title');
+        if (title) {
+            title.appendChild(perfilBadge);
+        }
+        
+        // Ocultar elementos que só devem aparecer para GESTÃO
+        const divergenciaResumo = document.getElementById('divergencia-resumo');
+        if (divergenciaResumo && perfilUsuario !== 'GESTAO') {
+            divergenciaResumo.style.display = 'none';
+        }
+        
+        // Ajustar largura da tabela baseado no perfil
+        const table = document.getElementById('relatorio-tabela');
+        if (table) {
+            if (perfilUsuario === 'GESTAO') {
+                table.style.minWidth = '1100px';
+            } else {
+                table.style.minWidth = '700px';
+            }
+        }
+        
+    } catch (e) {
+        console.error('❌ Erro ao ler sessão:', e);
+        perfilUsuario = 'OPERACIONAL';
+    }
+    
     console.log('🚀 Inicializando página de relatórios...');
     
-    // Inicializar botões de navegação
     window.addEventListener('scroll', controlarBotoesNavegacao);
     window.addEventListener('load', function() {
         setTimeout(controlarBotoesNavegacao, 500);
     });
     window.addEventListener('resize', controlarBotoesNavegacao);
     
-    // Carregar posição de estoque
     await carregarPosicaoEstoque();
-    
-    // Carregar relatórios
     carregarRelatorios();
 });
 
