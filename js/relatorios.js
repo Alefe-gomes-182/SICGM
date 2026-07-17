@@ -504,7 +504,7 @@ function getColunasPorPerfil() {
 }
 
 // ============================================
-// RENDERIZAR RELATÓRIO
+// RENDERIZAR RELATÓRIO - COM CORES NA DIVERGÊNCIA TOTAL
 // ============================================
 
 function renderizarRelatorio(dados) {
@@ -665,13 +665,52 @@ function renderizarRelatorio(dados) {
     
     tbody.innerHTML = html;
     
-    // Atualizar resumo de divergências (apenas para GESTÃO)
+    // ============================================
+    // ATUALIZAR RESUMO DE DIVERGÊNCIAS COM CORES
+    // ============================================
     if (resumoDiv) {
         if (isGestao && totalItensDivergentes > 0) {
             resumoDiv.style.display = 'block';
-            document.getElementById('total-divergencia-valor').textContent = formatarMoeda(totalDivergenciaValor);
-            document.getElementById('total-divergencia-qtd').textContent = totalDivergenciaQtd.toFixed(2);
+            
+            // Atualizar o valor total da divergência com cor
+            const totalDivergenciaValorEl = document.getElementById('total-divergencia-valor');
+            const totalDivergenciaQtdEl = document.getElementById('total-divergencia-qtd');
+            
+            // Colorir o VALOR TOTAL DA DIVERGÊNCIA
+            if (totalDivergenciaValorEl) {
+                let valorDisplay = formatarMoeda(totalDivergenciaValor);
+                let valorColor = '#2D3748'; // cinza escuro padrão
+                
+                if (totalDivergenciaValor > 0) {
+                    valorColor = '#48BB78'; // verde - mais físico que sistêmico
+                    valorDisplay = `▲ ${valorDisplay}`;
+                } else if (totalDivergenciaValor < 0) {
+                    valorColor = '#FC8181'; // vermelho - menos físico que sistêmico
+                    valorDisplay = `▼ ${valorDisplay}`;
+                }
+                
+                totalDivergenciaValorEl.innerHTML = `<span style="color: ${valorColor}; font-weight: 700;">${valorDisplay}</span>`;
+            }
+            
+            // Colorir a QUANTIDADE TOTAL DA DIVERGÊNCIA
+            if (totalDivergenciaQtdEl) {
+                let qtdDisplay = totalDivergenciaQtd.toFixed(2);
+                let qtdColor = '#2D3748'; // cinza escuro padrão
+                
+                if (totalDivergenciaQtd > 0) {
+                    qtdColor = '#48BB78'; // verde
+                    qtdDisplay = `▲ +${qtdDisplay}`;
+                } else if (totalDivergenciaQtd < 0) {
+                    qtdColor = '#FC8181'; // vermelho
+                    qtdDisplay = `▼ ${qtdDisplay}`;
+                }
+                
+                totalDivergenciaQtdEl.innerHTML = `<span style="color: ${qtdColor}; font-weight: 700;">${qtdDisplay}</span>`;
+            }
+            
+            // Atualizar total de itens divergentes
             document.getElementById('total-itens-divergentes').textContent = totalItensDivergentes;
+            
         } else {
             resumoDiv.style.display = 'none';
         }
