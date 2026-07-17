@@ -289,7 +289,7 @@ async function carregarDados() {
 }
 
 // ============================================
-// PROCESSAR DADOS PARA RELATÓRIO
+// PROCESSAR DADOS PARA RELATÓRIO - CORRIGIDO
 // ============================================
 
 function processarDados(dados, filtros) {
@@ -329,8 +329,13 @@ function processarDados(dados, filtros) {
     }
     
     // ============================================================
-    // CORREÇÃO: Para cada código, pegar APENAS o último registro
+    // REGRA DE PROCESSAMENTO POR TIPO DE MATERIAL:
+    // - Concretos, Miscelâneas, Específicos: pegar APENAS a última contagem
+    // - Trafos e Bobinas: SOMAR todas as quantidades (cada item é único)
     // ============================================================
+    
+    const tiposQueUsamUltimaContagem = ['concreto', 'miscelanea', 'especifico'];
+    const tiposQueSomaTudo = ['trafo', 'bobina'];
     
     // Agrupar por código
     const gruposPorCodigo = {};
@@ -343,50 +348,76 @@ function processarDados(dados, filtros) {
         gruposPorCodigo[codigo].push(item);
     });
     
-    // Para cada código, pegar apenas o registro mais recente
-    const ultimosRegistros = [];
+    const registrosProcessados = [];
     
     Object.values(gruposPorCodigo).forEach(registros => {
-        // Ordenar do mais antigo para o mais novo
+        const tipoMaterial = registros[0]?.tipo_material || 'desconhecido';
+        
+        // Ordenar por data (do mais antigo para o mais novo)
         registros.sort((a, b) => {
             const dateA = new Date(a.created_at || a.data);
             const dateB = new Date(b.created_at || b.data);
             return dateA - dateB;
         });
         
-        // Pegar o último registro (o mais recente)
-        const ultimoRegistro = registros[registros.length - 1];
-        ultimosRegistros.push(ultimoRegistro);
+        if (tiposQueUsamUltimaContagem.includes(tipoMaterial)) {
+            // Concretos, Miscelâneas, Específicos: APENAS a última contagem
+            const ultimoRegistro = registros[registros.length - 1];
+            registrosProcessados.push(ultimoRegistro);
+            console.log(`📊 ${tipoMaterial} ${ultimoRegistro.codigo}: usando última contagem (${ultimoRegistro.qtd})`);
+        } else if (tiposQueSomaTudo.includes(tipoMaterial)) {
+            // Trafos e Bobinas: SOMAR todas as quantidades
+            // Para trafos e bobinas, cada registro é um item único (tombamento diferente)
+            // Então somamos todas as quantidades
+            registros.forEach(registro => {
+                registrosProcessados.push(registro);
+            });
+            console.log(`📊 ${tipoMaterial}: ${registros.length} registros para somar`);
+        } else {
+            // Fallback: pegar o último registro para tipos desconhecidos
+            const ultimoRegistro = registros[registros.length - 1];
+            registrosProcessados.push(ultimoRegistro);
+        }
     });
     
-    // Agora agrupar para o relatório final (cada código terá apenas 1 registro)
+    // Agora agrupar para o relatório final
     const grupos = {};
     
-    ultimosRegistros.forEach(item => {
+    registrosProcessados.forEach(item => {
         const codigo = item.codigo;
+        const tipoMaterial = item.tipo_material || 'desconhecido';
+        
         if (!grupos[codigo]) {
             grupos[codigo] = {
                 codigo: codigo,
                 descricao: item.descricao || codigo,
                 und: item.und || '-',
-                tipo_material: item.tipo_material || 'desconhecido',
+                tipo_material: tipoMaterial,
                 quantidade_total: 0,
                 ultima_contagem: null,
                 ultimo_usuario: null,
                 ultima_data: null,
                 registros: [],
-                bobinas_unicas: new Set()
+                bobinas_unicas: new Set(),
+                // Para controle de quais registros foram usados
+                registros_usados: []
             };
         }
         
-        // Agora a quantidade_total é APENAS a última contagem
+        // Adicionar a quantidade (pode ser a última ou soma de todas)
         grupos[codigo].quantidade_total += parseFloat(item.qtd) || 0;
         grupos[codigo].registros.push(item);
+        grupos[codigo].registros_usados.push({
+            qtd: item.qtd,
+            data: item.data,
+            created_at: item.created_at
+        });
         
         if (item.tipo_material === 'bobina' && item.tombamento) {
             grupos[codigo].bobinas_unicas.add(item.tombamento);
         }
         
+        // Atualizar última contagem (último registro processado)
         const dataItem = new Date(item.created_at || item.data);
         if (!grupos[codigo].ultima_data || dataItem > new Date(grupos[codigo].ultima_data)) {
             grupos[codigo].ultima_contagem = item.qtd;
@@ -397,6 +428,12 @@ function processarDados(dados, filtros) {
     
     const resultado = Object.values(grupos);
     resultado.sort((a, b) => a.codigo.localeCompare(b.codigo));
+    
+    // Log para debug
+    console.log('📊 Resultado do processamento:');
+    resultado.forEach(item => {
+        console.log(`  ${item.codigo} (${item.tipo_material}): QTD=${item.quantidade_total}, Registros=${item.registros_usados.length}`);
+    });
     
     return resultado;
 }
