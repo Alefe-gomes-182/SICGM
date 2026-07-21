@@ -11,6 +11,22 @@
 <body>
 
     <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O TOPO                         -->
+    <!-- ============================================ -->
+    <button id="btnTopo" class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Ir para o topo">
+        <span class="btn-navegacao-icone">⬆</span>
+        <span class="btn-navegacao-texto">Topo</span>
+    </button>
+
+    <!-- ============================================ -->
+    <!-- BOTÃO IR PARA O FIM                         -->
+    <!-- ============================================ -->
+    <button id="btnFim" class="btn-navegacao btn-fim" onclick="irParaFim()" title="Ir para o fim da página">
+        <span class="btn-navegacao-icone">⬇</span>
+        <span class="btn-navegacao-texto">Fim</span>
+    </button>
+
+    <!-- ============================================ -->
     <!-- LOADING OVERLAY                              -->
     <!-- ============================================ -->
     <div class="loading-overlay" id="loadingOverlay">
@@ -42,10 +58,9 @@
                     <div class="user-matricula" id="matriculaUsuario">Matrícula: ---</div>
                 </div>
                 <span class="user-perfil" id="perfilUsuario">GESTÃO</span>
-                <button class="btn-voltar-home" id="btnVoltarHome" onclick="redirecionarParaHome()">
+                <button class="btn-voltar-home" onclick="redirecionarParaHome()">
                     🏠 Voltar
                 </button>
-                <button class="btn-sair" onclick="sair()">🚪 Sair</button>
             </div>
         </div>
 
@@ -57,46 +72,81 @@
         </p>
 
         <!-- ============================================ -->
-        <!-- FILTROS                                       -->
+        <!-- FILTROS E ORDENAÇÃO                          -->
         <!-- ============================================ -->
         <div class="filtros-container">
-            <div class="filtro-item">
-                <label for="filtroCodMat">Cód. Mat</label>
-                <input type="text" id="filtroCodMat" placeholder="Ex: 90063" />
+            <div class="filtro-row">
+                <div class="filtro-item">
+                    <label for="filtroCodMat">Cód. Mat</label>
+                    <input type="text" id="filtroCodMat" placeholder="Ex: 90063" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroDescricao">Descrição</label>
+                    <input type="text" id="filtroDescricao" placeholder="Ex: 75KVA" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroFabricante">Fabricante</label>
+                    <input type="text" id="filtroFabricante" placeholder="Ex: ITAIPU" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroSerie">Nº de Série</label>
+                    <input type="text" id="filtroSerie" placeholder="Ex: 232691" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroTombamento">Tombamento</label>
+                    <input type="text" id="filtroTombamento" placeholder="Ex: 58158" />
+                </div>
+                <div class="filtro-item">
+                    <label for="filtroStatus">Status</label>
+                    <select id="filtroStatus">
+                        <option value="">Todos</option>
+                        <option value="Estoque">Estoque</option>
+                        <option value="Obra">Obra</option>
+                        <option value="Transferido">Transferido</option>
+                        <option value="Falta">Falta</option>
+                    </select>
+                </div>
             </div>
-            <div class="filtro-item">
-                <label for="filtroDescricao">Descrição</label>
-                <input type="text" id="filtroDescricao" placeholder="Ex: 75KVA" />
+
+            <div class="filtro-row" style="border-top: 1px solid #E2E8F0; padding-top: 16px; margin-top: 4px;">
+                <div class="filtro-item data-item">
+                    <label for="filtroDataInicio">Dt. Rec. Energisa (Início)</label>
+                    <input type="date" id="filtroDataInicio" />
+                </div>
+                <div class="filtro-item data-item">
+                    <label for="filtroDataFim">Dt. Rec. Energisa (Fim)</label>
+                    <input type="date" id="filtroDataFim" />
+                </div>
+                <div class="filtro-item" style="flex: 0 0 180px;">
+                    <label for="filtroOrdenacao">Ordenar por</label>
+                    <select id="filtroOrdenacao">
+                        <option value="codigo">Código (A-Z)</option>
+                        <option value="codigo-desc">Código (Z-A)</option>
+                        <option value="descricao">Descrição (A-Z)</option>
+                        <option value="descricao-desc">Descrição (Z-A)</option>
+                        <option value="data">Data Rec. (Mais recente)</option>
+                        <option value="data-desc">Data Rec. (Mais antiga)</option>
+                        <option value="status">Status (A-Z)</option>
+                        <option value="status-desc">Status (Z-A)</option>
+                    </select>
+                </div>
+                <button class="btn-filtrar" id="btnBuscar">🔍 Buscar</button>
+                <button class="btn-limpar-filtros" id="btnLimparFiltros">✕ Limpar Filtros</button>
             </div>
-            <div class="filtro-item">
-                <label for="filtroFabricante">Fabricante</label>
-                <input type="text" id="filtroFabricante" placeholder="Ex: ITAIPU" />
-            </div>
-            <div class="filtro-item">
-                <label for="filtroSerie">Nº de Série</label>
-                <input type="text" id="filtroSerie" placeholder="Ex: 232691" />
-            </div>
-            <div class="filtro-item">
-                <label for="filtroTombamento">Tombamento</label>
-                <input type="text" id="filtroTombamento" placeholder="Ex: 58158" />
-            </div>
-            <div class="filtro-item">
-                <label for="filtroStatus">Status</label>
-                <select id="filtroStatus">
-                    <option value="">Todos</option>
-                    <option value="Estoque">Estoque</option>
-                    <option value="Obra">Obra</option>
-                    <option value="Transferido">Transferido</option>
-                    <option value="Falta">Falta</option>
-                </select>
-            </div>
-            <button class="btn-filtrar" id="btnBuscar">🔍 Buscar</button>
         </div>
 
         <!-- ============================================ -->
         <!-- ESTATÍSTICAS                                  -->
         <!-- ============================================ -->
-        <div class="stats" id="stats">Carregando registros...</div>
+        <div class="stats" id="stats">
+            <div class="stats-info">
+                <span>📊 <span class="destaque" id="totalRegistros">0</span> registros encontrados</span>
+                <span>📌 <span class="destaque" id="statusEstoque">0</span> em estoque</span>
+                <span>🔧 <span class="destaque" id="statusObra">0</span> em obra</span>
+                <span>🔄 <span class="destaque" id="statusTransferido">0</span> transferidos</span>
+                <span>❌ <span class="destaque" id="statusFalta">0</span> em falta</span>
+            </div>
+        </div>
 
         <!-- ============================================ -->
         <!-- TABELA                                        -->
@@ -105,13 +155,27 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Cód. Mat</th>
-                        <th>Descrição</th>
-                        <th>Fabricante</th>
-                        <th>Nº Série</th>
-                        <th>Tombamento</th>
-                        <th>Status</th>
-                        <th>Dt. Rec. Energisa</th>
+                        <th class="sortable" data-sort="codigo" onclick="ordenarPor('codigo')">
+                            <span class="th-content">Cód. Mat <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="descricao" onclick="ordenarPor('descricao')">
+                            <span class="th-content">Descrição <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="fabricante" onclick="ordenarPor('fabricante')">
+                            <span class="th-content">Fabricante <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="serie" onclick="ordenarPor('serie')">
+                            <span class="th-content">Nº Série <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="tombamento" onclick="ordenarPor('tombamento')">
+                            <span class="th-content">Tombamento <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="status" onclick="ordenarPor('status')">
+                            <span class="th-content">Status <span class="th-icon">▼</span></span>
+                        </th>
+                        <th class="sortable" data-sort="data" onclick="ordenarPor('data')">
+                            <span class="th-content">Dt. Rec. Energisa <span class="th-icon">▼</span></span>
+                        </th>
                         <th>Dt. Saída</th>
                         <th>Histórico</th>
                         <th>Obra/SS</th>
@@ -153,11 +217,41 @@
         }
 
         // ============================================
-        // SAIR
+        // IR PARA O TOPO
         // ============================================
-        function sair() {
-            sessionStorage.removeItem('sessaoSICGM');
-            window.location.href = '../index.html';
+        function irParaTopo() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // IR PARA O FIM
+        // ============================================
+        function irParaFim() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // MOSTRAR/OCULTAR BOTÕES DE NAVEGAÇÃO
+        // ============================================
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+            // Mostra botão Topo se rolar mais de 200px
+            if (scrollY > 200) {
+                btnTopo.classList.add('visivel');
+            } else {
+                btnTopo.classList.remove('visivel');
+            }
+
+            // Mostra botão Fim se não estiver no final
+            if (scrollY < alturaTotal - 100) {
+                btnFim.classList.add('visivel');
+            } else {
+                btnFim.classList.remove('visivel');
+            }
         }
 
         // ============================================
@@ -188,6 +282,13 @@
                 window.location.href = '../index.html';
                 return;
             }
+
+            // Controla visibilidade dos botões de navegação
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            
+            // Verifica posição inicial
+            setTimeout(controlarBotoesNavegacao, 100);
 
             setTimeout(() => {
                 loadingOverlay.classList.remove('active');
