@@ -210,34 +210,6 @@ if (document.getElementById('contagemForm')) {
     const dataFormatada = getDataBrasil();
     if (dataInput) dataInput.value = dataFormatada;
     
-    // ============================================
-    // FUNÇÃO PARA REDIRECIONAR PARA HOME - CORRIGIDA
-    // ============================================
-    
-    function redirecionarParaHome() {
-        const sessao = sessionStorage.getItem('sessaoSICGM');
-        if (sessao) {
-            try {
-                const dados = JSON.parse(sessao);
-                const perfil = dados.perfil || 'OPERACIONAL';
-                const homeMap = {
-                    'OPERACIONAL': 'home-operacional.html',
-                    'GESTAO': 'home-gestao.html',
-                    'VISUALIZACAO': 'home-visualizacao.html'
-                };
-                const homePage = homeMap[perfil] || 'login.html';
-                // Usa caminho absoluto a partir da raiz
-                window.location.href = homePage;
-            } catch (e) {
-                console.error('Erro ao redirecionar:', e);
-                window.location.href = 'login.html';
-            }
-        } else {
-            window.location.href = 'login.html';
-        }
-    }
-    
-    window.redirecionarParaHome = redirecionarParaHome;
     
     // ============================================
     // FUNÇÃO PARA TRAVAR ITEM APÓS REGISTRO
@@ -3923,12 +3895,13 @@ if (document.getElementById('contagemForm')) {
     window.addEventListener('resize', controlarBotoesNavegacao);
     
     // ============================================
-    // POP-UP DE DESCRIÇÃO - CORRIGIDO
+    // POP-UP DE DESCRIÇÃO - CORRIGIDO (CLIQUE)
     // ============================================
     
     const descricaoPopup = document.getElementById('descricao-popup');
     const popupOverlay = document.getElementById('popup-overlay');
     let popupTimeout = null;
+    let popupInputAtual = null;
     
     /**
      * Mostra o pop-up com a descrição completa do material
@@ -3938,6 +3911,12 @@ if (document.getElementById('contagemForm')) {
      */
     function mostrarDescricaoPopup(input, texto, codigo) {
         if (!descricaoPopup) return;
+        
+        // Se o mesmo input já está aberto, fecha
+        if (popupInputAtual === input && descricaoPopup.classList.contains('show')) {
+            fecharDescricaoPopup();
+            return;
+        }
         
         // Limpa timeout anterior
         if (popupTimeout) {
@@ -3969,13 +3948,11 @@ if (document.getElementById('contagemForm')) {
         
         // Posiciona o pop-up
         let top = rect.top - 12;
-        let isBottom = false;
         
         // Verifica se cabe acima
         if (top - descricaoPopup.offsetHeight < 10) {
             // Coloca abaixo
             top = rect.bottom + 12;
-            isBottom = true;
             descricaoPopup.classList.add('popup-bottom');
         } else {
             descricaoPopup.classList.remove('popup-bottom');
@@ -3993,6 +3970,9 @@ if (document.getElementById('contagemForm')) {
         descricaoPopup.style.left = left + 'px';
         descricaoPopup.style.top = top + 'px';
         descricaoPopup.style.maxWidth = popupWidth + 'px';
+        
+        // Guarda referência do input atual
+        popupInputAtual = input;
         
         // Ativa overlay
         if (popupOverlay) {
@@ -4022,41 +4002,23 @@ if (document.getElementById('contagemForm')) {
             clearTimeout(popupTimeout);
             popupTimeout = null;
         }
+        popupInputAtual = null;
     }
     
-    /**
-     * Verifica se o input é um campo de descrição e mostra o pop-up
-     * @param {Event} e - Evento do mouse
-     */
-    function handleDescricaoHover(e) {
-        const target = e.target;
-        
-        // Verifica se é um campo de descrição com atributo readonly
-        if (target.classList.contains('input-descricao') && target.readOnly) {
-            const descricao = target.value;
-            if (descricao && descricao.trim() !== '') {
-                // Tenta encontrar o código do material no mesmo item
-                const item = target.closest('.material-item');
-                let codigo = '';
-                if (item) {
-                    const codigoInput = item.querySelector('.input-readonly, .input-trafo');
-                    if (codigoInput) {
-                        codigo = codigoInput.value || '';
-                    }
-                }
-                mostrarDescricaoPopup(target, descricao, codigo);
-            }
-        }
-    }
+    // ============================================
+    // EVENTOS DO POP-UP - APENAS CLIQUE
+    // ============================================
     
-    // Eventos para pop-up
     if (descricaoPopup && popupOverlay) {
-        // Mouseover para mostrar
-        document.addEventListener('mouseover', function(e) {
+        // CLIQUE para mostrar/alternar o pop-up
+        document.addEventListener('click', function(e) {
             const target = e.target;
+            
+            // Verifica se clicou em um campo de descrição com atributo readonly
             if (target.classList.contains('input-descricao') && target.readOnly) {
                 const descricao = target.value;
                 if (descricao && descricao.trim() !== '') {
+                    // Tenta encontrar o código do material no mesmo item
                     const item = target.closest('.material-item');
                     let codigo = '';
                     if (item) {
@@ -4065,27 +4027,30 @@ if (document.getElementById('contagemForm')) {
                             codigo = codigoInput.value || '';
                         }
                     }
+                    // Mostra ou alterna o pop-up
                     mostrarDescricaoPopup(target, descricao, codigo);
+                    e.stopPropagation();
                 }
+                return;
             }
-        });
-        
-        // Mouseout para fechar com atraso
-        document.addEventListener('mouseout', function(e) {
-            const target = e.target;
-            if (target.classList.contains('input-descricao') && target.readOnly) {
-                // Fecha com um pequeno atraso para permitir mover o mouse para o pop-up
-                if (popupTimeout) {
-                    clearTimeout(popupTimeout);
-                }
-                popupTimeout = setTimeout(() => {
+            
+            // Fecha o pop-up se clicar fora
+            if (popupInputAtual) {
+                // Verifica se o clique não foi no pop-up nem no input
+                const isPopupClick = descricaoPopup.contains(e.target);
+                const isInputClick = popupInputAtual.contains(e.target);
+                
+                if (!isPopupClick && !isInputClick) {
                     fecharDescricaoPopup();
-                }, 300);
+                }
             }
         });
         
         // Clicar no overlay fecha o pop-up
-        popupOverlay.addEventListener('click', fecharDescricaoPopup);
+        popupOverlay.addEventListener('click', function(e) {
+            e.stopPropagation();
+            fecharDescricaoPopup();
+        });
         
         // Tecla ESC fecha o pop-up
         document.addEventListener('keydown', function(e) {

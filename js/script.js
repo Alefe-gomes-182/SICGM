@@ -58,7 +58,7 @@ function verificarSessao() {
  */
 function logout() {
     sessionStorage.removeItem('sessaoSICGM');
-    window.location.href = '/SICGM/login.html';
+    window.location.href = 'login.html';
 }
 
 /**
@@ -69,10 +69,10 @@ function redirecionarPorPerfil(perfil) {
     const perfilNormalizado = perfil.toUpperCase().trim();
     const homePage = HOME_PAGES[perfilNormalizado] || 'login.html';
     
-    console.log(`🔀 Redirecionando para: /SICGM/${homePage} (Perfil: ${perfilNormalizado})`);
+    console.log(`🔀 Redirecionando para: ${homePage} (Perfil: ${perfilNormalizado})`);
     
     // Redirecionar para a página correta na raiz
-    window.location.href = `/SICGM/${homePage}`;
+    window.location.href = homePage;
 }
 
 /**
@@ -84,7 +84,7 @@ function redirecionarParaHome() {
     
     if (!sessao) {
         console.log('🔒 Sessão inválida - Redirecionando para login');
-        window.location.href = '/SICGM/login.html';
+        window.location.href = 'login.html';
         return;
     }
     
@@ -92,8 +92,8 @@ function redirecionarParaHome() {
     const perfil = sessao.perfil.toUpperCase().trim();
     const homePage = HOME_PAGES[perfil] || 'login.html';
     
-    console.log(`🔀 Redirecionando para: /SICGM/${homePage} (Perfil: ${perfil})`);
-    window.location.href = `/SICGM/${homePage}`;
+    console.log(`🔀 Redirecionando para: ${homePage} (Perfil: ${perfil})`);
+    window.location.href = homePage;
 }
 
 /**
@@ -215,13 +215,13 @@ function verificarAcesso(perfilRequerido) {
     const sessao = verificarSessao();
     
     if (!sessao) {
-        window.location.href = '/SICGM/login.html';
+        window.location.href = 'login.html';
         return null;
     }
     
     if (perfilRequerido && sessao.perfil !== perfilRequerido) {
         console.log(`🔒 Perfil ${sessao.perfil} não autorizado para esta página`);
-        window.location.href = '/SICGM/login.html';
+        window.location.href = 'login.html';
         return null;
     }
     
@@ -258,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const sessao = verificarSessao();
         if (!sessao) {
             console.log('🔒 Sessão inválida - Redirecionando para login');
-            window.location.href = '/SICGM/login.html';
+            window.location.href = 'login.html';
         }
     }
 });
