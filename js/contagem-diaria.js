@@ -211,7 +211,7 @@ if (document.getElementById('contagemForm')) {
     if (dataInput) dataInput.value = dataFormatada;
     
     // ============================================
-    // FUNÇÃO PARA REDIRECIONAR PARA HOME
+    // FUNÇÃO PARA REDIRECIONAR PARA HOME - CORRIGIDA
     // ============================================
     
     function redirecionarParaHome() {
@@ -219,18 +219,21 @@ if (document.getElementById('contagemForm')) {
         if (sessao) {
             try {
                 const dados = JSON.parse(sessao);
+                const perfil = dados.perfil || 'OPERACIONAL';
                 const homeMap = {
-                    'OPERACIONAL': '../home-operacional.html',
-                    'GESTAO': '../home-gestao.html',
-                    'VISUALIZACAO': '../home-visualizacao.html'
+                    'OPERACIONAL': 'home-operacional.html',
+                    'GESTAO': 'home-gestao.html',
+                    'VISUALIZACAO': 'home-visualizacao.html'
                 };
-                const homePage = homeMap[dados.perfil] || '../index.html';
+                const homePage = homeMap[perfil] || 'login.html';
+                // Usa caminho absoluto a partir da raiz
                 window.location.href = homePage;
             } catch (e) {
-                window.location.href = '../index.html';
+                console.error('Erro ao redirecionar:', e);
+                window.location.href = 'login.html';
             }
         } else {
-            window.location.href = '../index.html';
+            window.location.href = 'login.html';
         }
     }
     
@@ -636,7 +639,7 @@ if (document.getElementById('contagemForm')) {
                 const tempoDecorrido = Date.now() - dadosSessao.timestamp;
                 if (tempoDecorrido > 30 * 60 * 1000) {
                     console.warn('⏰ Sessão expirada, redirecionando para login...');
-                    window.location.href = '../index.html';
+                    window.location.href = 'login.html';
                     return false;
                 }
                 
@@ -4108,3 +4111,4 @@ if (document.getElementById('contagemForm')) {
     
     window.mostrarDescricaoPopup = mostrarDescricaoPopup;
     window.fecharDescricaoPopup = fecharDescricaoPopup;
+}
