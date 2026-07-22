@@ -1941,3 +1941,161 @@
         font-size: 0.75em;
     }
 }
+
+/* ============================================ */
+/* POP-UP DE DESCRIÇÃO COMPLETA - CORRIGIDO    */
+/* ============================================ */
+
+.descricao-popup {
+    display: none;
+    position: fixed;
+    background-color: #1A202C;
+    color: #FFFFFF;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 0.9em;
+    min-width: 180px;
+    max-width: 400px;
+    word-wrap: break-word;
+    white-space: normal;
+    z-index: 10000;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    line-height: 1.5;
+    pointer-events: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transform: translateX(-50%);
+    transition: opacity 0.2s ease;
+    opacity: 0;
+}
+
+.descricao-popup.show {
+    display: block;
+    opacity: 1;
+    animation: popupFadeIn 0.25s ease-out;
+}
+
+@keyframes popupFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(8px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+}
+
+.descricao-popup::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px;
+    border-style: solid;
+}
+
+.descricao-popup:not(.popup-bottom)::after {
+    top: 100%;
+    border-color: #1A202C transparent transparent transparent;
+}
+
+.descricao-popup.popup-bottom::after {
+    bottom: 100%;
+    border-color: transparent transparent #1A202C transparent;
+}
+
+.descricao-popup .popup-titulo {
+    font-weight: 700;
+    color: #63B3ED;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.descricao-popup .popup-texto {
+    font-weight: 400;
+    font-size: 0.95em;
+}
+
+.descricao-popup .popup-codigo {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.75em;
+    color: #A0AEC0;
+    margin-top: 4px;
+}
+
+/* Overlay do pop-up */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background: transparent;
+}
+
+.popup-overlay.active {
+    display: block;
+}
+
+/* Estilo para o campo de descrição que ativa o pop-up */
+.input-descricao {
+    cursor: pointer !important;
+    position: relative;
+}
+
+.input-descricao[readonly]:hover {
+    background-color: #EBF8FF !important;
+    border-color: #63B3ED !important;
+}
+
+.input-descricao[readonly]::after {
+    content: 'ℹ️';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE - POP-UP                      */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .descricao-popup {
+        max-width: 300px;
+        padding: 12px 16px;
+        font-size: 0.8em;
+        min-width: 150px;
+    }
+    
+    .descricao-popup .popup-texto {
+        font-size: 0.85em;
+    }
+}
+
+@media (max-width: 480px) {
+    .descricao-popup {
+        max-width: 260px;
+        padding: 10px 14px;
+        font-size: 0.75em;
+        min-width: 120px;
+        border-radius: 8px;
+    }
+    
+    .descricao-popup .popup-texto {
+        font-size: 0.8em;
+    }
+    
+    .descricao-popup .popup-titulo {
+        font-size: 0.7em;
+    }
+}

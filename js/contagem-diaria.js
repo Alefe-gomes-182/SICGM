@@ -3920,43 +3920,191 @@ if (document.getElementById('contagemForm')) {
     window.addEventListener('resize', controlarBotoesNavegacao);
     
     // ============================================
-    // POP-UP DE DESCRIÇÃO
+    // POP-UP DE DESCRIÇÃO - CORRIGIDO
     // ============================================
     
     const descricaoPopup = document.getElementById('descricao-popup');
     const popupOverlay = document.getElementById('popup-overlay');
+    let popupTimeout = null;
     
-    function mostrarDescricaoPopup(input, texto) {
+    /**
+     * Mostra o pop-up com a descrição completa do material
+     * @param {HTMLElement} input - Elemento input que contém a descrição
+     * @param {string} texto - Texto da descrição a ser exibido
+     * @param {string} codigo - Código do material (opcional)
+     */
+    function mostrarDescricaoPopup(input, texto, codigo) {
+        if (!descricaoPopup) return;
+        
+        // Limpa timeout anterior
+        if (popupTimeout) {
+            clearTimeout(popupTimeout);
+            popupTimeout = null;
+        }
+        
+        // Se não houver texto, fecha o pop-up
+        if (!texto || texto.trim() === '') {
+            fecharDescricaoPopup();
+            return;
+        }
+        
+        // Obtém a posição do input
         const rect = input.getBoundingClientRect();
-        descricaoPopup.textContent = texto;
+        const popupWidth = Math.min(400, window.innerWidth - 40);
+        
+        // Conteúdo do pop-up
+        let html = '';
+        if (codigo) {
+            html += `<span class="popup-titulo">📦 Código: ${codigo}</span>`;
+        } else {
+            html += `<span class="popup-titulo">📋 Descrição Completa</span>`;
+        }
+        html += `<span class="popup-texto">${texto}</span>`;
+        
+        descricaoPopup.innerHTML = html;
         descricaoPopup.className = 'descricao-popup show';
-        descricaoPopup.style.left = rect.left + (rect.width / 2) + 'px';
-        descricaoPopup.style.top = (rect.top - descricaoPopup.offsetHeight - 10) + 'px';
-        popupOverlay.classList.add('active');
+        
+        // Posiciona o pop-up
+        let top = rect.top - 12;
+        let isBottom = false;
+        
+        // Verifica se cabe acima
+        if (top - descricaoPopup.offsetHeight < 10) {
+            // Coloca abaixo
+            top = rect.bottom + 12;
+            isBottom = true;
+            descricaoPopup.classList.add('popup-bottom');
+        } else {
+            descricaoPopup.classList.remove('popup-bottom');
+        }
+        
+        // Garante que não ultrapasse a tela
+        let left = rect.left + (rect.width / 2);
+        const halfPopupWidth = Math.min(200, popupWidth / 2);
+        if (left - halfPopupWidth < 10) {
+            left = 10 + halfPopupWidth;
+        } else if (left + halfPopupWidth > window.innerWidth - 10) {
+            left = window.innerWidth - 10 - halfPopupWidth;
+        }
+        
+        descricaoPopup.style.left = left + 'px';
+        descricaoPopup.style.top = top + 'px';
+        descricaoPopup.style.maxWidth = popupWidth + 'px';
+        
+        // Ativa overlay
+        if (popupOverlay) {
+            popupOverlay.classList.add('active');
+        }
+        
+        // Auto-fecha após 5 segundos
+        if (popupTimeout) {
+            clearTimeout(popupTimeout);
+        }
+        popupTimeout = setTimeout(() => {
+            fecharDescricaoPopup();
+        }, 5000);
     }
     
+    /**
+     * Fecha o pop-up de descrição
+     */
     function fecharDescricaoPopup() {
-        descricaoPopup.classList.remove('show');
-        popupOverlay.classList.remove('active');
+        if (descricaoPopup) {
+            descricaoPopup.classList.remove('show');
+        }
+        if (popupOverlay) {
+            popupOverlay.classList.remove('active');
+        }
+        if (popupTimeout) {
+            clearTimeout(popupTimeout);
+            popupTimeout = null;
+        }
     }
     
-    popupOverlay.addEventListener('click', fecharDescricaoPopup);
+    /**
+     * Verifica se o input é um campo de descrição e mostra o pop-up
+     * @param {Event} e - Evento do mouse
+     */
+    function handleDescricaoHover(e) {
+        const target = e.target;
+        
+        // Verifica se é um campo de descrição com atributo readonly
+        if (target.classList.contains('input-descricao') && target.readOnly) {
+            const descricao = target.value;
+            if (descricao && descricao.trim() !== '') {
+                // Tenta encontrar o código do material no mesmo item
+                const item = target.closest('.material-item');
+                let codigo = '';
+                if (item) {
+                    const codigoInput = item.querySelector('.input-readonly, .input-trafo');
+                    if (codigoInput) {
+                        codigo = codigoInput.value || '';
+                    }
+                }
+                mostrarDescricaoPopup(target, descricao, codigo);
+            }
+        }
+    }
     
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('input-descricao') && e.target.readOnly) {
-            const descricao = e.target.value;
-            if (descricao && descricao.trim() !== '') {
-                mostrarDescricaoPopup(e.target, descricao);
+    // Eventos para pop-up
+    if (descricaoPopup && popupOverlay) {
+        // Mouseover para mostrar
+        document.addEventListener('mouseover', function(e) {
+            const target = e.target;
+            if (target.classList.contains('input-descricao') && target.readOnly) {
+                const descricao = target.value;
+                if (descricao && descricao.trim() !== '') {
+                    const item = target.closest('.material-item');
+                    let codigo = '';
+                    if (item) {
+                        const codigoInput = item.querySelector('.input-readonly, .input-trafo');
+                        if (codigoInput) {
+                            codigo = codigoInput.value || '';
+                        }
+                    }
+                    mostrarDescricaoPopup(target, descricao, codigo);
+                }
             }
-        }
-    });
-
-    document.addEventListener('focus', function(e) {
-        if (e.target.classList.contains('input-descricao') && e.target.readOnly) {
-            const descricao = e.target.value;
-            if (descricao && descricao.trim() !== '') {
-                mostrarDescricaoPopup(e.target, descricao);
+        });
+        
+        // Mouseout para fechar com atraso
+        document.addEventListener('mouseout', function(e) {
+            const target = e.target;
+            if (target.classList.contains('input-descricao') && target.readOnly) {
+                // Fecha com um pequeno atraso para permitir mover o mouse para o pop-up
+                if (popupTimeout) {
+                    clearTimeout(popupTimeout);
+                }
+                popupTimeout = setTimeout(() => {
+                    fecharDescricaoPopup();
+                }, 300);
             }
-        }
-    }, true);
-}
+        });
+        
+        // Clicar no overlay fecha o pop-up
+        popupOverlay.addEventListener('click', fecharDescricaoPopup);
+        
+        // Tecla ESC fecha o pop-up
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                fecharDescricaoPopup();
+            }
+        });
+        
+        // Redimensionar a janela fecha o pop-up
+        window.addEventListener('resize', function() {
+            fecharDescricaoPopup();
+        });
+        
+        // Scroll fecha o pop-up
+        window.addEventListener('scroll', function() {
+            fecharDescricaoPopup();
+        }, { passive: true });
+    }
+    
+    // ============================================
+    // EXPOR FUNÇÕES DO POP-UP
+    // ============================================
+    
+    window.mostrarDescricaoPopup = mostrarDescricaoPopup;
+    window.fecharDescricaoPopup = fecharDescricaoPopup;
