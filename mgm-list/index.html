@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MGM - Formulário</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Contagem Diária (reutiliza estilos) -->
+    <link rel="stylesheet" href="../css/contagem-diaria.css">
 </head>
 <body>
     <div class="container">
@@ -14,6 +19,13 @@
             <div class="header-container">
                 <img src="../assets/img/logo-control.png" alt="Logo MGM" class="logo-empresa">
                 <h1 class="title">MGM</h1>
+            </div>
+            
+            <!-- Botão Voltar ao Início Baseado no Perfil -->
+            <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
+                    🏠 Voltar ao Início
+                </button>
             </div>
             
             <form id="mgmForm">
@@ -132,12 +144,23 @@
             
         </div><!-- Fecha form-card -->
         
-        <!-- Botão Voltar -->
+        <!-- Rodapé com link de voltar (fallback) -->
         <div style="text-align: center; margin-top: 1rem;">
-            <a href="../home.html" style="color: #4299E1; text-decoration: none; font-weight: 500;">← Voltar para Home</a>
+            <button onclick="redirecionarParaHome()" style="
+                background: transparent;
+                color: #4299E1;
+                border: none;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                text-decoration: underline;
+            ">
+                ← Voltar para Home
+            </button>
         </div>
     </div><!-- Fecha container -->
 
+    <!-- Scripts -->
     <script src="../js/script.js"></script>
 </body>
 </html>

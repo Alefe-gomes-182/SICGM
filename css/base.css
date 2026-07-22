@@ -1,0 +1,432 @@
+/* ============================================ */
+/* BASE - RESET E ESTILOS GLOBAIS               */
+/* ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #F0F4F8;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 1000px;
+}
+
+.form-card {
+    background-color: #FFFFFF;
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid #E8EDF2;
+}
+
+/* ============================================ */
+/* CABEÇALHO - LOGO + TÍTULO                    */
+/* ============================================ */
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 15px;
+    margin-bottom: 2rem;
+    padding: 0.5rem 0;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.logo-empresa {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+}
+
+.header-container .title {
+    margin-bottom: 0;
+}
+
+.title {
+    font-size: 1.6rem;
+    color: #2d3748;
+    margin: 0;
+}
+
+/* ============================================ */
+/* BOTÃO VOLTAR HOME                            */
+/* ============================================ */
+
+.btn-voltar-home {
+    background: #4299E1;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-voltar-home:hover {
+    background: #3182CE;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.btn-voltar-home:active {
+    transform: translateY(0);
+}
+
+.btn-voltar-home.small {
+    padding: 6px 15px;
+    font-size: 12px;
+}
+
+.btn-voltar-home.outline {
+    background: transparent;
+    color: #4299E1;
+    border: 2px solid #4299E1;
+}
+
+.btn-voltar-home.outline:hover {
+    background: #4299E1;
+    color: white;
+}
+
+/* ============================================ */
+/* TOAST DE NOTIFICAÇÃO FLUTUANTE               */
+/* ============================================ */
+
+.toast-notificacao {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: toastSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.toast-sucesso {
+    background: linear-gradient(135deg, #48bb78, #38a169);
+    color: #ffffff;
+    border-color: #48bb78;
+}
+
+.toast-erro {
+    background: linear-gradient(135deg, #fc8181, #e53e3e);
+    color: #ffffff;
+    border-color: #fc8181;
+}
+
+.toast-info {
+    background: linear-gradient(135deg, #63b3ed, #4299e1);
+    color: #ffffff;
+    border-color: #63b3ed;
+}
+
+.toast-aviso {
+    background: linear-gradient(135deg, #f6ad55, #ed8936);
+    color: #ffffff;
+    border-color: #f6ad55;
+}
+
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toastSlideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+}
+
+/* ============================================ */
+/* BOTÕES DE NAVEGAÇÃO - TOPO E FIM            */
+/* ============================================ */
+
+.btn-navegacao {
+    position: fixed;
+    right: 20px;
+    z-index: 9998;
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+}
+
+.btn-navegacao.visivel {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.btn-navegacao:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.btn-navegacao:active {
+    transform: scale(0.95);
+}
+
+.btn-navegacao-icone {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.btn-navegacao-texto {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-topo {
+    bottom: 80px;
+    background: linear-gradient(135deg, #4299E1, #3182CE);
+    color: white;
+}
+
+.btn-topo:hover {
+    background: linear-gradient(135deg, #3182CE, #2B6CB0);
+}
+
+.btn-fim {
+    bottom: 20px;
+    background: linear-gradient(135deg, #48BB78, #38A169);
+    color: white;
+}
+
+.btn-fim:hover {
+    background: linear-gradient(135deg, #38A169, #2F855A);
+}
+
+/* ============================================ */
+/* MENSAGEM                                     */
+/* ============================================ */
+
+.mensagem {
+    display: none;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    font-weight: 500;
+}
+
+.mensagem.sucesso {
+    display: block;
+    background-color: #F0FFF4;
+    color: #22543D;
+    border: 1px solid #48BB78;
+}
+
+.mensagem.erro {
+    display: block;
+    background-color: #FFF5F5;
+    color: #742A2A;
+    border: 1px solid #FC8181;
+}
+
+.mensagem.info {
+    display: block;
+    background-color: #EBF8FF;
+    color: #2A4365;
+    border: 1px solid #63B3ED;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE BASE                          */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .header-container {
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .logo-empresa {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .title {
+        font-size: 1.3rem;
+    }
+    
+    .form-card {
+        padding: 25px;
+    }
+    
+    .btn-voltar-home {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .btn-navegacao {
+        width: 42px;
+        height: 42px;
+        right: 15px;
+        font-size: 12px;
+    }
+    
+    .btn-navegacao-icone {
+        font-size: 15px;
+    }
+    
+    .btn-navegacao-texto {
+        font-size: 7px;
+    }
+    
+    .btn-topo {
+        bottom: 70px;
+    }
+    
+    .btn-fim {
+        bottom: 15px;
+    }
+    
+    .toast-notificacao {
+        max-width: 350px;
+        font-size: 13px;
+        padding: 12px 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+        align-items: flex-start;
+    }
+    
+    .form-card {
+        padding: 15px 12px;
+        border-radius: 10px;
+    }
+    
+    .header-container {
+        gap: 8px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .logo-empresa {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .title {
+        font-size: 1rem;
+    }
+    
+    .btn-voltar-home {
+        font-size: 0.8em;
+        padding: 8px 12px;
+    }
+    
+    .btn-navegacao {
+        width: 36px;
+        height: 36px;
+        right: 10px;
+        font-size: 10px;
+    }
+    
+    .btn-navegacao-icone {
+        font-size: 12px;
+    }
+    
+    .btn-navegacao-texto {
+        font-size: 6px;
+    }
+    
+    .btn-topo {
+        bottom: 60px;
+    }
+    
+    .btn-fim {
+        bottom: 10px;
+    }
+    
+    .toast-notificacao {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        font-size: 0.8em;
+        padding: 10px 14px;
+        border-radius: 6px;
+    }
+    
+    .mensagem {
+        font-size: 0.8em;
+        padding: 10px;
+    }
+}
+
+@media (max-width: 360px) {
+    .form-card {
+        padding: 10px 8px;
+    }
+    
+    .title {
+        font-size: 0.9rem;
+    }
+    
+    .logo-empresa {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .toast-notificacao {
+        font-size: 0.7em;
+        padding: 8px 12px;
+    }
+}

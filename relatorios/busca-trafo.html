@@ -1,11 +1,14 @@
-<!-- relatorios/busca-trafo.html -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SICGM - Busca Trafo</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Busca Trafo -->
     <link rel="stylesheet" href="../css/busca-trafo.css">
 </head>
 <body>
@@ -202,7 +205,7 @@
         function redirecionarParaHome() {
             const sessao = verificarSessao();
             if (!sessao) {
-                window.location.href = '../index.html';
+                window.location.href = '../login.html';
                 return;
             }
 
@@ -213,7 +216,7 @@
                 'VISUALIZACAO': '../home-visualizacao.html'
             };
 
-            window.location.href = homePages[perfil] || '../index.html';
+            window.location.href = homePages[perfil] || '../login.html';
         }
 
         // ============================================
@@ -239,14 +242,12 @@
             const scrollY = window.scrollY;
             const alturaTotal = document.body.scrollHeight - window.innerHeight;
 
-            // Mostra botão Topo se rolar mais de 200px
             if (scrollY > 200) {
                 btnTopo.classList.add('visivel');
             } else {
                 btnTopo.classList.remove('visivel');
             }
 
-            // Mostra botão Fim se não estiver no final
             if (scrollY < alturaTotal - 100) {
                 btnFim.classList.add('visivel');
             } else {
@@ -267,7 +268,7 @@
             
             if (!sessao) {
                 console.log('🔒 Sessão inválida - Redirecionando para login');
-                window.location.href = '../index.html';
+                window.location.href = '../login.html';
                 return;
             }
 
@@ -279,15 +280,13 @@
                 document.getElementById('perfilUsuario').textContent = sessao.perfil || 'GESTÃO';
             } catch (e) {
                 console.error('Erro ao carregar dados do usuário:', e);
-                window.location.href = '../index.html';
+                window.location.href = '../login.html';
                 return;
             }
 
-            // Controla visibilidade dos botões de navegação
             window.addEventListener('scroll', controlarBotoesNavegacao);
             window.addEventListener('resize', controlarBotoesNavegacao);
             
-            // Verifica posição inicial
             setTimeout(controlarBotoesNavegacao, 100);
 
             setTimeout(() => {
@@ -316,7 +315,7 @@
             const sessao = verificarSessao();
             if (!sessao) {
                 console.log('🔒 Sessão expirada - Redirecionando para login');
-                window.location.href = '../index.html';
+                window.location.href = '../login.html';
             }
         }, 5 * 60 * 1000);
     </script>

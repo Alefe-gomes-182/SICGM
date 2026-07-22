@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SICGM - Relatórios</title>
-    <link rel="stylesheet" href="../css/styles.css">
-    <link rel="stylesheet" href="../css/relatorios.css">
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Relatório -->
+    <link rel="stylesheet" href="../css/relatorio.css">
 </head>
 <body>
     <!-- ============================================ -->
@@ -164,6 +168,65 @@
         </div>
     </div>
 
+    <!-- Scripts -->
+    <script src="../js/script.js"></script>
     <script src="../js/relatorios.js"></script>
+    <script>
+        // ============================================
+        // FUNÇÕES DE NAVEGAÇÃO
+        // ============================================
+        function irParaTopo() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function irParaFim() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        function redirecionarParaHome() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                window.location.href = '../login.html';
+                return;
+            }
+
+            const perfil = sessao.perfil || 'GESTAO';
+            const homePages = {
+                'GESTAO': '../home-gestao.html',
+                'OPERACIONAL': '../home-operacional.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+
+            window.location.href = homePages[perfil] || '../login.html';
+        }
+
+        // ============================================
+        // CONTROLAR BOTÕES DE NAVEGAÇÃO
+        // ============================================
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+            if (scrollY > 200) {
+                btnTopo.classList.add('visivel');
+            } else {
+                btnTopo.classList.remove('visivel');
+            }
+
+            if (scrollY < alturaTotal - 100) {
+                btnFim.classList.add('visivel');
+            } else {
+                btnFim.classList.remove('visivel');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            setTimeout(controlarBotoesNavegacao, 100);
+        });
+    </script>
 </body>
 </html>

@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SICGM - Contagem Diária</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    
+    <!-- CSS Base -->
+    <link rel="stylesheet" href="../css/base.css">
+    
+    <!-- CSS Contagem Diária -->
+    <link rel="stylesheet" href="../css/contagem-diaria.css">
 </head>
 <body>
     <!-- ============================================ -->
@@ -51,6 +56,9 @@
         </div>
     </div>
 
+    <!-- ============================================ -->
+    <!-- CONTEÚDO PRINCIPAL                          -->
+    <!-- ============================================ -->
     <div class="container">
         <div class="form-card">
             
@@ -62,20 +70,7 @@
             
             <!-- Botão Voltar ao Início Baseado no Perfil -->
             <div style="display: flex; justify-content: flex-start; margin-bottom: 20px;">
-                <button onclick="redirecionarParaHome()" style="
-                    background: #4299E1;
-                    color: white;
-                    border: none;
-                    padding: 10px 25px;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: 600;
-                    font-size: 14px;
-                    transition: all 0.3s ease;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 8px;
-                " onmouseover="this.style.background='#3182CE'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#4299E1'; this.style.transform='translateY(0)'">
+                <button onclick="redirecionarParaHome()" class="btn-voltar-home">
                     🏠 Voltar ao Início
                 </button>
             </div>
@@ -220,7 +215,8 @@
     <div id="descricao-popup" class="descricao-popup"></div>
     <div id="popup-overlay" class="popup-overlay"></div>
 
-    <!-- Importar apenas o contagem-diaria.js (NÃO importar script.js) -->
+    <!-- Scripts -->
+    <script src="../js/script.js"></script>
     <script src="../js/contagem-diaria.js"></script>
 </body>
 </html>
