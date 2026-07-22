@@ -3866,7 +3866,6 @@ if (document.getElementById('contagemForm')) {
     window.toggleConcretoEntradaFields = toggleConcretoEntradaFields;
     window.removerEntradaConcreto = removerEntradaConcreto;
     window.validarConcretoEntrada = validarConcretoEntrada;
-    window.redirecionarParaHome = redirecionarParaHome;
     window.aplicarFiltro = aplicarFiltro;
     window.limparFiltro = limparFiltro;
     window.irParaTopo = irParaTopo;
