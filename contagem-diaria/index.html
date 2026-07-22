@@ -219,5 +219,76 @@
     <!-- Scripts -->
     <script src="../js/script.js"></script>
     <script src="../js/contagem-diaria.js"></script>
+    
+    <!-- ============================================ -->
+    <!-- REDIRECIONAMENTO LOCAL - CORRIGIDO          -->
+    <!-- ============================================ -->
+    <script>
+        // ============================================
+        // REDIRECIONAMENTO BASEADO NO PERFIL
+        // ============================================
+        function redirecionarParaHome() {
+            const sessao = verificarSessao();
+            if (!sessao) {
+                window.location.href = '../login.html';
+                return;
+            }
+
+            const perfil = sessao.perfil || 'GESTAO';
+            const homePages = {
+                'GESTAO': '../home-gestao.html',
+                'OPERACIONAL': '../home-operacional.html',
+                'VISUALIZACAO': '../home-visualizacao.html'
+            };
+
+            window.location.href = homePages[perfil] || '../login.html';
+        }
+
+        // ============================================
+        // IR PARA O TOPO
+        // ============================================
+        function irParaTopo() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // IR PARA O FIM
+        // ============================================
+        function irParaFim() {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // ============================================
+        // MOSTRAR/OCULTAR BOTÕES DE NAVEGAÇÃO
+        // ============================================
+        function controlarBotoesNavegacao() {
+            const btnTopo = document.getElementById('btnTopo');
+            const btnFim = document.getElementById('btnFim');
+            const scrollY = window.scrollY;
+            const alturaTotal = document.body.scrollHeight - window.innerHeight;
+
+            if (scrollY > 200) {
+                btnTopo.classList.add('visivel');
+            } else {
+                btnTopo.classList.remove('visivel');
+            }
+
+            if (scrollY < alturaTotal - 100) {
+                btnFim.classList.add('visivel');
+            } else {
+                btnFim.classList.remove('visivel');
+            }
+        }
+
+        // ============================================
+        // INICIALIZAR BOTÕES DE NAVEGAÇÃO
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('scroll', controlarBotoesNavegacao);
+            window.addEventListener('resize', controlarBotoesNavegacao);
+            setTimeout(controlarBotoesNavegacao, 100);
+        });
+    </script>
+
 </body>
 </html>
