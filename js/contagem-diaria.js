@@ -24,7 +24,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CATEGORIAS DE MATERIAIS - COM ESPECÍFICOS E ROTATIVOS
+    // CATEGORIAS DE MATERIAIS
     // ============================================
         
     const CATEGORIAS = {
@@ -200,6 +200,7 @@ if (document.getElementById('contagemForm')) {
     let registrosCarregados = false;
     let itemsRegistrados = new Set();
     let enviandoDados = false;
+    let baixaPendente = null;
     
     // ============================================
     // PREENCHER DATA AUTOMATICAMENTE
@@ -331,8 +332,6 @@ if (document.getElementById('contagemForm')) {
     // FUNÇÃO PARA ABRIR MODAL DE CONFIRMAÇÃO DE BAIXA
     // ============================================
     
-    let baixaPendente = null;
-    
     function abrirModalBaixa(tipo, index, tipoMaterial) {
         const codigoInput = document.getElementById(`${tipo}-codigo-${index}`);
         const descricaoInput = document.getElementById(`${tipo}-descricao-${index}`);
@@ -340,7 +339,7 @@ if (document.getElementById('contagemForm')) {
         const item = document.querySelector(`.${tipoMaterial}-item[data-index="${index}"]`);
         const idRegistro = item ? item.dataset.id : null;
         
-        if (!idRegistro || idRegistro === 'null') {
+        if (!idRegistro || idRegistro === 'null' || idRegistro === '') {
             mostrarToast('❌ Este item ainda não foi registrado no banco de dados.', 'erro');
             return;
         }
@@ -352,12 +351,16 @@ if (document.getElementById('contagemForm')) {
         const modal = document.getElementById('modal-baixa');
         const modalIcon = document.getElementById('modal-icon');
         const modalTitle = document.getElementById('modal-title');
-        const modalInfo = document.getElementById('modal-info');
+        const modalCodigo = document.getElementById('modal-codigo');
+        const modalDescricao = document.getElementById('modal-descricao');
+        const modalTombamento = document.getElementById('modal-tombamento');
+        const modalTombamentoRow = document.getElementById('modal-tombamento-row');
         const modalInput = document.getElementById('modal-n-obra');
         const modalConfirmar = document.getElementById('modal-confirmar');
         const modalCancelar = document.getElementById('modal-cancelar');
         const modalError = document.getElementById('modal-error');
         
+        // Configurar ícone e título
         if (tipoMaterial === 'trafo') {
             modalIcon.textContent = '⚡';
             modalTitle.textContent = 'Dar Baixa no Trafo';
@@ -366,18 +369,26 @@ if (document.getElementById('contagemForm')) {
             modalTitle.textContent = 'Dar Baixa na Bobina';
         }
         
-        modalInfo.innerHTML = `
-            <span><span class="label">Código:</span> <span class="value">${codigo}</span></span>
-            <span><span class="label">Descrição:</span> <span class="value">${descricao}</span></span>
-            ${tombamento ? `<span><span class="label">Tombamento:</span> <span class="value">${tombamento}</span></span>` : ''}
-        `;
+        // Preencher informações
+        modalCodigo.textContent = codigo || '-';
+        modalDescricao.textContent = descricao || '-';
         
+        if (tombamento) {
+            modalTombamento.textContent = tombamento;
+            modalTombamentoRow.style.display = 'block';
+        } else {
+            modalTombamentoRow.style.display = 'none';
+        }
+        
+        // Resetar campos
         modalInput.value = '';
         modalInput.classList.remove('input-error');
+        modalError.classList.remove('show');
         modalError.style.display = 'none';
         modalConfirmar.disabled = false;
         modalConfirmar.textContent = '✅ Confirmar Baixa';
         
+        // Guardar dados pendentes
         baixaPendente = {
             tipo: tipo,
             index: index,
@@ -387,9 +398,16 @@ if (document.getElementById('contagemForm')) {
             descricao: descricao
         };
         
+        // Abrir modal
         modal.classList.add('active');
-        modalInput.focus();
+        document.body.style.overflow = 'hidden';
         
+        // Focar no input após animação
+        setTimeout(() => {
+            modalInput.focus();
+        }, 300);
+        
+        // Eventos
         modalConfirmar.onclick = function() {
             confirmarBaixa();
         };
@@ -415,6 +433,10 @@ if (document.getElementById('contagemForm')) {
         };
     }
     
+    // ============================================
+    // FUNÇÃO PARA CONFIRMAR BAIXA
+    // ============================================
+    
     function confirmarBaixa() {
         const modalInput = document.getElementById('modal-n-obra');
         const modalError = document.getElementById('modal-error');
@@ -422,22 +444,26 @@ if (document.getElementById('contagemForm')) {
         
         const nObra = modalInput.value.trim();
         
+        // Validar Nº da Obra
         if (!nObra) {
             modalInput.classList.add('input-error');
-            modalError.style.display = 'block';
             modalError.textContent = '⚠️ O Nº da Obra é obrigatório para dar baixa.';
-            modalInput.focus();
-            return;
-        }
-        
-        if (nObra.length < 3) {
-            modalInput.classList.add('input-error');
+            modalError.classList.add('show');
             modalError.style.display = 'block';
-            modalError.textContent = '⚠️ Digite um Nº de obra válido (mínimo 3 caracteres).';
             modalInput.focus();
             return;
         }
         
+        if (nObra.length < 2) {
+            modalInput.classList.add('input-error');
+            modalError.textContent = '⚠️ Digite um Nº de obra válido (mínimo 2 caracteres).';
+            modalError.classList.add('show');
+            modalError.style.display = 'block';
+            modalInput.focus();
+            return;
+        }
+        
+        // Desabilitar botão
         modalConfirmar.disabled = true;
         modalConfirmar.textContent = '⏳ Processando...';
         
@@ -450,18 +476,33 @@ if (document.getElementById('contagemForm')) {
         executarBaixa(baixaPendente.id, nObra, baixaPendente.tipoMaterial, baixaPendente.tipo, baixaPendente.index);
     }
     
+    // ============================================
+    // FUNÇÃO PARA FECHAR MODAL DE BAIXA
+    // ============================================
+    
     function fecharModalBaixa() {
         const modal = document.getElementById('modal-baixa');
         modal.classList.remove('active');
-        baixaPendente = null;
+        document.body.style.overflow = '';
         
+        // Resetar campos
         const modalInput = document.getElementById('modal-n-obra');
+        const modalError = document.getElementById('modal-error');
+        const modalConfirmar = document.getElementById('modal-confirmar');
+        
         modalInput.value = '';
         modalInput.classList.remove('input-error');
-        document.getElementById('modal-error').style.display = 'none';
-        document.getElementById('modal-confirmar').disabled = false;
-        document.getElementById('modal-confirmar').textContent = '✅ Confirmar Baixa';
+        modalError.classList.remove('show');
+        modalError.style.display = 'none';
+        modalConfirmar.disabled = false;
+        modalConfirmar.textContent = '✅ Confirmar Baixa';
+        
+        baixaPendente = null;
     }
+    
+    // ============================================
+    // FUNÇÃO PARA EXECUTAR BAIXA
+    // ============================================
     
     async function executarBaixa(id, nObra, tipoMaterial, tipo, index) {
         try {
@@ -485,19 +526,22 @@ if (document.getElementById('contagemForm')) {
                 
                 const item = document.querySelector(`.${tipoMaterial}-item[data-index="${index}"]`);
                 if (item) {
+                    // Marcar como baixado
                     item.dataset.jaRegistrado = 'true';
                     item.classList.add('item-registrado', 'item-baixado');
                     item.style.borderColor = '#E53E3E';
                     item.style.borderWidth = '2px';
                     item.style.borderStyle = 'solid';
+                    item.style.background = '#FFF5F5';
                     
+                    // Atualizar badge
                     const header = item.querySelector('.material-header');
                     if (header) {
                         const oldBadge = header.querySelector('.badge-registrado');
                         if (oldBadge) oldBadge.remove();
                         
                         const badge = document.createElement('span');
-                        badge.className = 'badge-registrado';
+                        badge.className = 'badge-registrado baixado';
                         badge.innerHTML = '🔴 Baixado';
                         badge.style.cssText = `
                             background: #E53E3E;
@@ -511,6 +555,7 @@ if (document.getElementById('contagemForm')) {
                         header.appendChild(badge);
                     }
                     
+                    // Bloquear campos
                     const qtdInput = item.querySelector('.input-qtd');
                     if (qtdInput) {
                         qtdInput.value = '0';
@@ -523,8 +568,7 @@ if (document.getElementById('contagemForm')) {
                     const btnBaixa = item.querySelector('.btn-dar-baixa');
                     if (btnBaixa) {
                         btnBaixa.disabled = true;
-                        btnBaixa.style.opacity = '0.5';
-                        btnBaixa.style.cursor = 'not-allowed';
+                        btnBaixa.classList.add('baixado');
                         btnBaixa.textContent = '🔴 Baixado';
                     }
                     
@@ -540,6 +584,22 @@ if (document.getElementById('contagemForm')) {
                     if (btnRemover) {
                         btnRemover.style.display = 'none';
                     }
+                    
+                    const extraInputs = item.querySelectorAll('.input-extra');
+                    extraInputs.forEach(input => {
+                        input.setAttribute('readonly', 'readonly');
+                        input.classList.add('input-locked');
+                        input.style.backgroundColor = '#edf2f7';
+                        input.style.cursor = 'not-allowed';
+                    });
+                    
+                    const selects = item.querySelectorAll('select');
+                    selects.forEach(select => {
+                        select.setAttribute('disabled', 'disabled');
+                        select.classList.add('input-locked');
+                        select.style.backgroundColor = '#edf2f7';
+                        select.style.cursor = 'not-allowed';
+                    });
                 }
                 
                 fecharModalBaixa();
@@ -750,7 +810,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CARREGAR TODOS OS REGISTROS DO D1
+    // CARREGAR TODOS OS REGISTROS DO BANCO
     // ============================================
     
     async function carregarTodosRegistros() {
@@ -776,38 +836,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR SE ITEM JÁ EXISTE NO BANCO
-    // ============================================
-        
-    function itemJaExisteNoBanco(codigo, tombamento, tipoMaterial) {
-        if (!codigo) return false;
-        
-        const categoriasRotativas = ['laco', 'alca', 'parafuso', 'cabo', 'miscelanea1', 'miscelanea2', 'medidor'];
-        const categoriasMultiplas = ['concreto', 'miscelanea', 'especifico'];
-        const categoriasSemDuplicata = [...categoriasRotativas, ...categoriasMultiplas];
-        
-        if (categoriasSemDuplicata.includes(tipoMaterial)) {
-            console.log(`✅ ${tipoMaterial} ${codigo} - duplicata PERMITIDA (contagens múltiplas)`);
-            return false;
-        }
-        
-        if (!tombamento) {
-            console.log(`⚠️ ${tipoMaterial} sem tombamento - não verifica duplicata`);
-            return false;
-        }
-        
-        const existe = todosRegistrosDB.some(r => 
-            r.codigo === codigo && 
-            r.tombamento === tombamento && 
-            r.ativo === 1 &&
-            r.tipo_material === tipoMaterial
-        );
-        console.log(`🔍 Verificando duplicata ${tipoMaterial} ${codigo} (${tombamento}): ${existe ? 'EXISTE' : 'NÃO EXISTE'}`);
-        return existe;
-    }
-    
-    // ============================================
-    // CARREGAR ITENS MANUAIS DO D1
+    // CARREGAR ITENS MANUAIS DO BANCO
     // ============================================
     
     async function carregarItensManuais() {
@@ -915,7 +944,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // CRIAR SISTEMA DE ABAS PRINCIPAIS E SUB-ABAS
+    // CRIAR SISTEMA DE ABAS
     // ============================================
     
     function criarAbas() {
@@ -940,7 +969,6 @@ if (document.getElementById('contagemForm')) {
             }
         };
         
-        // Para cada subdivisão, criar suas abas
         for (const [subId, subConfig] of Object.entries(subdivisoes)) {
             const tabsNav = document.getElementById(`tabs-nav-${subId}`);
             const tabsContent = document.getElementById(`tabs-content-${subId}`);
@@ -991,25 +1019,20 @@ if (document.getElementById('contagemForm')) {
             tabsNav.innerHTML = htmlNav;
             tabsContent.innerHTML = htmlContent;
             
-            // Ativar primeira aba da subdivisão
             if (primeiraCategoria) {
                 ativarAbaSubdivisao(subId, primeiraCategoria);
             }
         }
         
-        // Esconder loading
         loading.style.display = 'none';
-        
-        // Ativar primeira aba principal por padrão (Diária)
         ativarTipoContagem('diaria');
     }
     
     // ============================================
-    // ATIVAR TIPO DE CONTAGEM (ABA PRINCIPAL)
+    // ATIVAR TIPO DE CONTAGEM
     // ============================================
     
     function ativarTipoContagem(tipo) {
-        // Atualizar botões principais
         document.querySelectorAll('.tab-principal-btn').forEach(btn => {
             btn.classList.remove('active');
             if (btn.dataset.tipo === tipo) {
@@ -1017,7 +1040,6 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
-        // Atualizar conteúdos principais
         document.querySelectorAll('.tab-principal-content').forEach(content => {
             content.classList.remove('active');
         });
@@ -1027,7 +1049,6 @@ if (document.getElementById('contagemForm')) {
             contentAtivo.classList.add('active');
         }
         
-        // Atualizar o título da página
         const tituloMap = {
             'diaria': '📋 Contagem Diária',
             'semanal': '📅 Contagem Semanal',
@@ -1039,7 +1060,6 @@ if (document.getElementById('contagemForm')) {
             titleElement.textContent = `SICGM - ${tituloMap[tipo] || 'Contagem'}`;
         }
         
-        // Reaplicar filtro após trocar de aba
         setTimeout(() => {
             if (typeof aplicarFiltro === 'function') {
                 aplicarFiltro();
@@ -1074,15 +1094,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR SE CÓDIGO EXISTE NO BANCO
-    // ============================================
-    
-    function codigoExisteNoBanco(codigo) {
-        return codigosExistentesDB.has(codigo);
-    }
-    
-    // ============================================
-    // RENDERIZAR CATEGORIAS ROTATIVAS
+    // FUNÇÕES DE RENDERIZAÇÃO - CATEGORIAS ROTATIVAS
     // ============================================
     
     function renderizarCategoriaRotativa(materiais, chave) {
@@ -1156,10 +1168,6 @@ if (document.getElementById('contagemForm')) {
         
         return html;
     }
-    
-    // ============================================
-    // FUNÇÃO PARA CALCULAR DIFERENÇA EM CATEGORIAS ROTATIVAS
-    // ============================================
     
     function calcularDiferencaRotativa(idUnico, codigo) {
         calcularDiferenca(idUnico, codigo);
@@ -1249,7 +1257,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ADICIONAR ENTRADA DE CONCRETO
+    // FUNÇÕES DE ENTRADAS DE CONCRETO
     // ============================================
     
     function adicionarEntradaConcreto(idUnico) {
@@ -1613,7 +1621,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES PARA MISCELÂNEAS
+    // FUNÇÕES PARA MISCELÂNEAS E ESPECÍFICOS
     // ============================================
 
     function adicionarEntradaMiscelanea(idUnico) {
@@ -1662,10 +1670,6 @@ if (document.getElementById('contagemForm')) {
             atualizarTotalConcreto(idUnico);
         }, 100);
     }
-    
-    // ============================================
-    // FUNÇÕES PARA ESPECÍFICOS
-    // ============================================
 
     function adicionarEntradaEspecifico(idUnico) {
         const listDiv = document.getElementById(`concreto-entradas-list-${idUnico}`);
@@ -1791,7 +1795,7 @@ if (document.getElementById('contagemForm')) {
                                 ✕
                             </button>
                             `}
-                            ${jaRegistrado ? `<span class="badge-registrado" style="margin-left:10px; ${estaBaixado ? 'background:#E53E3E;' : ''}">${estaBaixado ? '🔴 Baixado' : '✅ Registrado'}</span>` : ''}
+                            ${jaRegistrado ? `<span class="badge-registrado ${estaBaixado ? 'baixado' : ''}">${estaBaixado ? '🔴 Baixado' : '✅ Registrado'}</span>` : ''}
                         </div>
                     </div>
                     
@@ -1966,7 +1970,7 @@ if (document.getElementById('contagemForm')) {
                                 ✕
                             </button>
                             `}
-                            ${jaRegistrado ? `<span class="badge-registrado" style="margin-left:10px; ${estaBaixado ? 'background:#E53E3E;' : ''}">${estaBaixado ? '🔴 Baixado' : '✅ Registrado'}</span>` : ''}
+                            ${jaRegistrado ? `<span class="badge-registrado ${estaBaixado ? 'baixado' : ''}">${estaBaixado ? '🔴 Baixado' : '✅ Registrado'}</span>` : ''}
                         </div>
                     </div>
                     
@@ -2087,7 +2091,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES PARA BOBINAS E TRAFOS
+    // FUNÇÕES AUXILIARES
     // ============================================
     
     function verificarNObraBobina(index) {
@@ -2110,10 +2114,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // ============================================
-    // VALIDAR CÓDIGO DA BOBINA
-    // ============================================
-
     function validarCodigoBobina(index, codigo) {
         const statusDiv = document.getElementById(`bobina-codigo-status-${index}`);
         const descricaoInput = document.getElementById(`bobina-descricao-${index}`);
@@ -2212,10 +2212,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // ============================================
-    // FUNÇÕES DE VALIDAÇÃO
-    // ============================================
-    
     function validarTrafoCompleto(index) {
         if (index === undefined || index === null || isNaN(index) || index < 0) {
             console.error('❌ Index inválido em validarTrafoCompleto:', index);
@@ -2287,10 +2283,6 @@ if (document.getElementById('contagemForm')) {
         return true;
     }
     
-    // ============================================
-    // CALCULAR DIFERENÇA
-    // ============================================
-    
     function calcularDiferencaBobina(idUnico, codigo) {
         calcularDiferenca(idUnico, codigo);
     }
@@ -2348,7 +2340,7 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // ADICIONAR BOBINA
+    // FUNÇÕES PARA ADICIONAR BOBINAS E TRAFOS
     // ============================================
     
     function adicionarBobina() {
@@ -2404,10 +2396,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // ============================================
-    // SALVAR DADOS ATUAIS DAS BOBINAS
-    // ============================================
-    
     function salvarDadosBobinasAtuais() {
         const bobinaItems = document.querySelectorAll('.bobina-item');
         bobinaItems.forEach((item) => {
@@ -2433,10 +2421,6 @@ if (document.getElementById('contagemForm')) {
             bobinasManuais[index].id = item.dataset.id || null;
         });
     }
-    
-    // ============================================
-    // SALVAR DADOS ATUAIS DOS TRAFOS
-    // ============================================
     
     function salvarDadosTrafosAtuais() {
         const trafoItems = document.querySelectorAll('.trafo-item');
@@ -2470,10 +2454,6 @@ if (document.getElementById('contagemForm')) {
         });
     }
     
-    // ============================================
-    // REMOVER BOBINA
-    // ============================================
-    
     function removerBobina(index) {
         const bobina = bobinasManuais[index];
         const codigo = bobina?.codigo || '';
@@ -2496,10 +2476,6 @@ if (document.getElementById('contagemForm')) {
             mostrarToast('✅ Bobina removida com sucesso!', 'sucesso');
         }
     }
-    
-    // ============================================
-    // ADICIONAR TRAFO
-    // ============================================
     
     function adicionarTrafo() {
         console.log('🔧 Função adicionarTrafo chamada');
@@ -2554,10 +2530,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // ============================================
-    // REMOVER TRAFO
-    // ============================================
-    
     function removerTrafo(index) {
         const trafo = materiaisManuais[index];
         const codigo = trafo?.codigo || '';
@@ -2601,10 +2573,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // ============================================
-    // VALIDAR CÓDIGO DO TRAFO
-    // ============================================
-
     function validarCodigoTrafo(index, codigo) {
         const statusDiv = document.getElementById(`codigo-status-${index}`);
         const descricaoInput = document.getElementById(`trafo-descricao-${index}`);
@@ -2703,10 +2671,6 @@ if (document.getElementById('contagemForm')) {
         }
     }
     
-    // ============================================
-    // BUSCAR DADOS DO CÓDIGO
-    // ============================================
-
     function buscarDadosCodigo(codigo) {
         if (!codigo || !materiaisBanco.length) return null;
         const material = materiaisBanco.find(m => m.codigo === codigo.trim());
@@ -2912,21 +2876,19 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // FUNÇÕES DE FILTRO DE PESQUISA
+    // FUNÇÕES DE FILTRO
     // ============================================
 
     function aplicarFiltro() {
         const texto = document.getElementById('filtro-texto').value.toLowerCase().trim();
         const tipo = document.getElementById('filtro-tipo').value;
         
-        // Encontrar a subdivisão ativa
         const subdivisaoAtiva = document.querySelector('.tab-principal-content.active');
         if (!subdivisaoAtiva) {
             document.getElementById('filtro-contagem').textContent = 'Mostrando 0 itens';
             return;
         }
         
-        // Buscar itens na subdivisão ativa
         const items = subdivisaoAtiva.querySelectorAll('.material-item');
         let visiveis = 0;
         
@@ -2981,21 +2943,15 @@ if (document.getElementById('contagemForm')) {
     }   
     
     // ============================================
-    // FUNÇÕES DE NAVEGAÇÃO - TOPO E FIM
+    // FUNÇÕES DE NAVEGAÇÃO
     // ============================================
 
     function irParaTopo() {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function irParaFim() {
-        window.scrollTo({
-            top: document.body.scrollHeight,
-            behavior: 'smooth'
-        });
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
     function controlarBotoesNavegacao() {
@@ -3022,9 +2978,9 @@ if (document.getElementById('contagemForm')) {
     }
     
     // ============================================
-    // VERIFICAR DUPLICATA
+    // FUNÇÕES AUXILIARES DE VALIDAÇÃO
     // ============================================
-        
+    
     function verificarDuplicata(codigo, tombamento, tipoMaterial) {
         if (!codigo) return false;
         
@@ -3052,14 +3008,8 @@ if (document.getElementById('contagemForm')) {
         return existe;
     }
     
-    // ============================================
-    // ITEM FOI MODIFICADO
-    // ============================================
-    
     function itemFoiModificado(inputQtd, item) {
-        if (!inputQtd) {
-            return false;
-        }
+        if (!inputQtd) return false;
         
         const valor = inputQtd.value;
         if (valor === '' || valor === null || valor === undefined || valor.trim() === '') {
@@ -3067,37 +3017,19 @@ if (document.getElementById('contagemForm')) {
         }
         
         const qtdAtual = parseFloat(valor);
-        
-        if (isNaN(qtdAtual)) {
-            return false;
-        }
-        
-        if (qtdAtual === 0) {
-            return false;
-        }
+        if (isNaN(qtdAtual)) return false;
+        if (qtdAtual === 0) return false;
         
         const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
         const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
         const idRegistro = item.dataset.id || null;
         
-        if (item.dataset.jaRegistrado === 'true') {
-            return false;
-        }
-        
-        if (idRegistro && idRegistro !== 'null' && qtdAtual === qtdAnterior) {
-            return false;
-        }
-        
-        if (!idRegistro || idRegistro === 'null') {
-            return qtdAtual > 0;
-        }
+        if (item.dataset.jaRegistrado === 'true') return false;
+        if (idRegistro && idRegistro !== 'null' && qtdAtual === qtdAnterior) return false;
+        if (!idRegistro || idRegistro === 'null') return qtdAtual > 0;
         
         return qtdAtual !== qtdAnterior;
     }
-    
-    // ============================================
-    // VERIFICAR SE QUANTIDADE É MENOR QUE ANTERIOR
-    // ============================================
     
     function quantidadeMenorQueAnterior(qtdAtual, qtdAnterior) {
         return qtdAtual < qtdAnterior;
@@ -3139,9 +3071,7 @@ if (document.getElementById('contagemForm')) {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
             
-            if (item.dataset.jaRegistrado === 'true') {
-                return;
-            }
+            if (item.dataset.jaRegistrado === 'true') return;
             
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             
@@ -3150,10 +3080,7 @@ if (document.getElementById('contagemForm')) {
             }
             
             const qtd = parseFloat(qtdInput.value);
-            
-            if (isNaN(qtd) || qtd === 0) {
-                return;
-            }
+            if (isNaN(qtd) || qtd === 0) return;
             
             if (!validarTrafoCompleto(index)) {
                 trafoIncompleto = true;
@@ -3174,9 +3101,7 @@ if (document.getElementById('contagemForm')) {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
             
-            if (item.dataset.jaRegistrado === 'true') {
-                return;
-            }
+            if (item.dataset.jaRegistrado === 'true') return;
             
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             
@@ -3185,10 +3110,7 @@ if (document.getElementById('contagemForm')) {
             }
             
             const qtd = parseFloat(qtdInput.value);
-            
-            if (isNaN(qtd) || qtd === 0) {
-                return;
-            }
+            if (isNaN(qtd) || qtd === 0) return;
             
             if (!validarBobinaCompleta(index)) {
                 bobinaIncompleta = true;
@@ -3236,26 +3158,18 @@ if (document.getElementById('contagemForm')) {
         trafoItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
-            
             if (item.dataset.jaRegistrado === 'true') return;
             
             const qtdInput = document.getElementById(`qtd-trafos-${index}`);
             if (!qtdInput) return;
-            
-            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
-                return;
-            }
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
-            
             if (!itemFoiModificado(qtdInput, item)) {
                 console.log(`⏭️ Trafo #${index} não foi modificado - pulando`);
                 return;
             }
-            
-            if (qtdAtual === 0) {
-                return;
-            }
+            if (qtdAtual === 0) return;
             
             const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
             const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
@@ -3338,26 +3252,18 @@ if (document.getElementById('contagemForm')) {
         bobinaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
             if (isNaN(index)) return;
-            
             if (item.dataset.jaRegistrado === 'true') return;
             
             const qtdInput = document.getElementById(`qtd-bobinas-${index}`);
             if (!qtdInput) return;
-            
-            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
-                return;
-            }
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
-            
             if (!itemFoiModificado(qtdInput, item)) {
                 console.log(`⏭️ Bobina #${index} não foi modificada - pulando`);
                 return;
             }
-            
-            if (qtdAtual === 0) {
-                return;
-            }
+            if (qtdAtual === 0) return;
             
             const qtdAnteriorInput = item.querySelector('.input-qtd-anterior');
             const qtdAnterior = parseFloat(qtdAnteriorInput?.value) || 0;
@@ -3449,10 +3355,7 @@ if (document.getElementById('contagemForm')) {
             const idUnico = `concretos-${index}`;
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
             if (!qtdInput) return;
-            
-            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
-                return;
-            }
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
@@ -3461,10 +3364,7 @@ if (document.getElementById('contagemForm')) {
                 console.log(`⏭️ Concreto ${codigo} não foi modificado - pulando`);
                 return;
             }
-            
-            if (qtdAtual === 0) {
-                return;
-            }
+            if (qtdAtual === 0) return;
             
             console.log(`✅ Concreto ${codigo} - novo registro permitido (contagem múltipla)`);
             
@@ -3533,10 +3433,7 @@ if (document.getElementById('contagemForm')) {
             const idUnico = `miscelaneas-${index}`;
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
             if (!qtdInput) return;
-            
-            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
-                return;
-            }
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
@@ -3545,10 +3442,7 @@ if (document.getElementById('contagemForm')) {
                 console.log(`⏭️ Miscelânea ${codigo} não foi modificada - pulando`);
                 return;
             }
-            
-            if (qtdAtual === 0) {
-                return;
-            }
+            if (qtdAtual === 0) return;
             
             console.log(`✅ Miscelânea ${codigo} - novo registro permitido (contagem múltipla)`);
             
@@ -3617,10 +3511,7 @@ if (document.getElementById('contagemForm')) {
             const idUnico = `especificos-${index}`;
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
             if (!qtdInput) return;
-            
-            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
-                return;
-            }
+            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
             const qtdAtual = parseFloat(qtdInput.value) || 0;
             const codigo = item.dataset.codigo;
@@ -3629,10 +3520,7 @@ if (document.getElementById('contagemForm')) {
                 console.log(`⏭️ Específico ${codigo} não foi modificado - pulando`);
                 return;
             }
-            
-            if (qtdAtual === 0) {
-                return;
-            }
+            if (qtdAtual === 0) return;
             
             console.log(`✅ Específico ${codigo} - novo registro permitido (contagem múltipla)`);
             
@@ -3706,10 +3594,7 @@ if (document.getElementById('contagemForm')) {
                 const idUnico = `${chaveRotativa}-${index}`;
                 const qtdInput = document.getElementById(`qtd-${idUnico}`);
                 if (!qtdInput) return;
-                
-                if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) {
-                    return;
-                }
+                if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
                 
                 const qtdAtual = parseFloat(qtdInput.value) || 0;
                 const codigo = item.dataset.codigo;
@@ -3718,10 +3603,7 @@ if (document.getElementById('contagemForm')) {
                     console.log(`⏭️ ${chaveRotativa} ${codigo} não foi modificado - pulando`);
                     return;
                 }
-                
-                if (qtdAtual === 0) {
-                    return;
-                }
+                if (qtdAtual === 0) return;
                 
                 console.log(`✅ ${chaveRotativa} ${codigo} - novo registro permitido (contagem múltipla)`);
                 
@@ -3844,7 +3726,7 @@ if (document.getElementById('contagemForm')) {
     });
     
     // ============================================
-    // EXPOR FUNÇÕES GLOBAIS PARA O HTML
+    // EXPOR FUNÇÕES GLOBAIS
     // ============================================
     
     window.ativarTipoContagem = ativarTipoContagem;

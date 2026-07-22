@@ -1519,3 +1519,425 @@
         min-height: 32px;
     }
 }
+
+/* ============================================ */
+/* MODAL DE CONFIRMAÇÃO DE BAIXA - CORRIGIDO   */
+/* ============================================ */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    animation: fadeInModal 0.3s ease-out;
+    padding: 20px;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-container {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 30px 35px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideUpModal 0.3s ease-out;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+@keyframes slideUpModal {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #F0F4F8;
+}
+
+.modal-header .modal-icon {
+    font-size: 32px;
+    line-height: 1;
+    background: #FFF5F5;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.modal-header h2 {
+    color: #2D3748;
+    font-size: 1.3em;
+    margin: 0;
+    font-weight: 700;
+}
+
+.modal-body {
+    margin-bottom: 25px;
+}
+
+.modal-body p {
+    color: #4A5568;
+    font-size: 0.95em;
+    line-height: 1.6;
+    margin: 0 0 18px 0;
+}
+
+.modal-body .item-info {
+    background: #F7FAFC;
+    border-radius: 10px;
+    padding: 14px 18px;
+    border: 1px solid #E2E8F0;
+    margin-bottom: 18px;
+}
+
+.modal-body .item-info span {
+    display: block;
+    font-size: 0.9em;
+    color: #4A5568;
+    padding: 3px 0;
+}
+
+.modal-body .item-info .label {
+    font-weight: 600;
+    color: #2D3748;
+    min-width: 70px;
+    display: inline-block;
+}
+
+.modal-body .item-info .value {
+    color: #2B6CB0;
+    font-weight: 500;
+}
+
+.modal-body label {
+    display: block;
+    font-weight: 600;
+    color: #2D3748;
+    font-size: 0.9em;
+    margin-bottom: 6px;
+}
+
+.modal-body label::after {
+    content: ' *';
+    color: #E53E3E;
+}
+
+.modal-body input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 1em;
+    transition: all 0.3s ease;
+    outline: none;
+    background: #FFFFFF;
+    box-sizing: border-box;
+}
+
+.modal-body input:focus {
+    border-color: #4299E1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+}
+
+.modal-body input.input-error {
+    border-color: #FC8181;
+    background: #FFF5F5;
+    box-shadow: 0 0 0 3px rgba(252, 129, 129, 0.15);
+}
+
+.modal-error {
+    display: none;
+    color: #E53E3E;
+    font-size: 0.85em;
+    margin-top: 8px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background: #FFF5F5;
+    border-radius: 6px;
+    border-left: 3px solid #E53E3E;
+}
+
+.modal-error.show {
+    display: block;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 2px solid #F0F4F8;
+}
+
+.modal-footer button {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.modal-footer .btn-modal-cancelar {
+    background: #EDF2F7;
+    color: #4A5568;
+}
+
+.modal-footer .btn-modal-cancelar:hover {
+    background: #E2E8F0;
+    transform: translateY(-2px);
+}
+
+.modal-footer .btn-modal-confirmar {
+    background: #E53E3E;
+    color: white;
+    box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+.modal-footer .btn-modal-confirmar:hover {
+    background: #C53030;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(229, 62, 62, 0.4);
+}
+
+.modal-footer .btn-modal-confirmar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============================================ */
+/* BOTÃO DAR BAIXA - CORRIGIDO                  */
+/* ============================================ */
+
+.btn-dar-baixa {
+    background: #E53E3E;
+    color: white;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    box-shadow: 0 2px 8px rgba(229, 62, 62, 0.25);
+}
+
+.btn-dar-baixa:hover:not(:disabled) {
+    background: #C53030;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(229, 62, 62, 0.35);
+}
+
+.btn-dar-baixa:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.btn-dar-baixa:disabled {
+    background: #A0AEC0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.7;
+}
+
+.btn-dar-baixa.baixado {
+    background: #48BB78;
+}
+
+/* ============================================ */
+/* BADGE REGISTRADO / BAIXADO                   */
+/* ============================================ */
+
+.badge-registrado {
+    display: inline-block;
+    background: #48BB78;
+    color: white;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+.badge-registrado.baixado {
+    background: #E53E3E;
+}
+
+/* ============================================ */
+/* ITEM BAIXADO                                 */
+/* ============================================ */
+
+.material-item.item-baixado {
+    border-color: #E53E3E !important;
+    border-width: 2px !important;
+    border-style: solid !important;
+    background: #FFF5F5 !important;
+}
+
+.material-item.item-baixado .material-number {
+    color: #E53E3E !important;
+}
+
+.material-item.item-baixado .input-qtd,
+.material-item.item-baixado .input-extra,
+.material-item.item-baixado .input-trafo,
+.material-item.item-baixado .input-descricao,
+.material-item.item-baixado .input-justificativa {
+    background-color: #edf2f7 !important;
+    cursor: not-allowed !important;
+    opacity: 0.8;
+}
+
+.material-item.item-baixado select {
+    background-color: #edf2f7 !important;
+    cursor: not-allowed !important;
+    opacity: 0.8;
+}
+
+/* ============================================ */
+/* RESPONSIVIDADE DO MODAL                      */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .modal-container {
+        padding: 25px 20px;
+        max-width: 95%;
+    }
+    
+    .modal-header .modal-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.1em;
+    }
+    
+    .modal-footer button {
+        padding: 10px 20px;
+        font-size: 0.85em;
+        min-width: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-container {
+        padding: 20px 16px;
+        max-width: 100%;
+        border-radius: 12px;
+    }
+    
+    .modal-header {
+        gap: 10px;
+        margin-bottom: 15px;
+        padding-bottom: 12px;
+    }
+    
+    .modal-header .modal-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1em;
+    }
+    
+    .modal-body p {
+        font-size: 0.85em;
+    }
+    
+    .modal-body .item-info {
+        padding: 10px 14px;
+    }
+    
+    .modal-body .item-info span {
+        font-size: 0.8em;
+    }
+    
+    .modal-body input {
+        padding: 10px 12px;
+        font-size: 0.9em;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 15px;
+    }
+    
+    .modal-footer button {
+        width: 100%;
+        padding: 12px;
+        font-size: 0.9em;
+        min-width: unset;
+    }
+    
+    .btn-dar-baixa {
+        padding: 6px 14px;
+        font-size: 0.7em;
+        min-height: 30px;
+    }
+}
+
+@media (max-width: 360px) {
+    .modal-container {
+        padding: 15px 12px;
+    }
+    
+    .modal-header h2 {
+        font-size: 0.9em;
+    }
+    
+    .modal-body .item-info {
+        padding: 8px 10px;
+    }
+    
+    .modal-body .item-info span {
+        font-size: 0.75em;
+    }
+}
