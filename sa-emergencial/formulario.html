@@ -191,59 +191,77 @@
             window.location.href = 'index.html';
         }
 
+        // Função para mostrar erro na tela
+        function mostrarErro(mensagem) {
+            const body = document.querySelector('.sa-form-body');
+            body.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <p style="font-size: 48px;">❌</p>
+                    <h2 style="color: #f44336;">Erro ao carregar formulário</h2>
+                    <p style="color: #666; margin: 20px 0;">${mensagem}</p>
+                    <button onclick="window.location.href='index.html'" style="padding: 12px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        ⬅ Voltar ao Painel
+                    </button>
+                    <button onclick="window.location.reload()" style="margin-left: 10px; padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        🔄 Tentar Novamente
+                    </button>
+                </div>
+            `;
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             manager = window.saManager;
             
-            // Verificar se é nova SA ou edição
-            const params = new URLSearchParams(window.location.search);
-            const numero = params.get('numero');
-            
-            await manager.carregarUsuarioLogado();
-            
-            if (numero) {
-                // Editar SA existente
-                numeroSA = parseInt(numero);
-                const sa = await manager.buscarSA(numeroSA);
-                if (sa) {
-                    manager.saAtual = sa;
-                    carregarDadosFormulario(sa);
-                } else {
-                    alert('❌ S.A. não encontrada!');
-                    window.location.href = 'index.html';
-                }
-            } else {
-                // Nova SA - verificar permissão
-                const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
-                if (!podeCriar) {
-                    alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
-                    window.location.href = 'index.html';
-                    return;
-                }
+            try {
+                // Verificar se é nova SA ou edição
+                const params = new URLSearchParams(window.location.search);
+                const numero = params.get('numero');
                 
-                try {
+                await manager.carregarUsuarioLogado();
+                
+                if (numero) {
+                    // Editar SA existente
+                    numeroSA = parseInt(numero);
+                    const sa = await manager.buscarSA(numeroSA);
+                    if (sa) {
+                        manager.saAtual = sa;
+                        carregarDadosFormulario(sa);
+                    } else {
+                        alert('❌ S.A. não encontrada!');
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    // Nova SA - verificar permissão
+                    const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
+                    if (!podeCriar) {
+                        alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
+                        window.location.href = 'index.html';
+                        return;
+                    }
+                    
                     const novaSA = await manager.criarSA(manager.usuarioAtual);
                     if (novaSA) {
                         numeroSA = novaSA.numero;
                         document.getElementById('saNumero').textContent = `#${String(numeroSA).padStart(4, '0')}`;
                         document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
                     }
-                } catch (error) {
-                    alert('❌ Erro ao criar S.A.: ' + error.message);
-                    window.location.href = 'index.html';
                 }
+                
+                // Inicializar Signature Pad
+                manager.initSignaturePad('signatureCanvas');
+                
+                // Atualizar assinaturas
+                manager.atualizarVisualizacaoAssinaturas();
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar formulário:', error);
+                mostrarErro(error.message || 'Erro ao carregar dados do servidor');
             }
-            
-            // Inicializar Signature Pad
-            manager.initSignaturePad('signatureCanvas');
-            
-            // Atualizar assinaturas
-            manager.atualizarVisualizacaoAssinaturas();
         });
 
         function carregarDadosFormulario(sa) {
             document.getElementById('saNumero').textContent = `#${String(sa.numero).padStart(4, '0')}`;
             
-            // Dados do colaborador
             const col = sa.colaborador || {};
             document.getElementById('matricula').value = col.matricula || '';
             document.getElementById('colaborador').value = col.nome || '';
@@ -252,11 +270,9 @@
             document.getElementById('filial').value = col.filial || '';
             document.getElementById('centroCusto').value = col.centroCusto || '';
             
-            // Dados da solicitação
             document.getElementById('solicitante').value = sa.solicitante || '';
             document.getElementById('dataSolicitacao').value = sa.dataSolicitacao || '';
             
-            // Itens
             const tbody = document.getElementById('itemsBody');
             tbody.innerHTML = '';
             if (sa.itens && sa.itens.length > 0) {
@@ -276,32 +292,35 @@
             const matricula = document.getElementById('matricula').value.trim();
             if (!matricula) return;
             
-            const colaborador = await manager.buscarColaborador(matricula);
-            if (colaborador) {
-                document.getElementById('colaborador').value = colaborador.colaborador;
-                document.getElementById('cpf').value = colaborador.cpf;
-                document.getElementById('funcao').value = colaborador.funcao;
-                document.getElementById('filial').value = colaborador.filial;
-                document.getElementById('centroCusto').value = colaborador.centroCusto;
-                
-                // Atualizar SA atual
-                if (manager.saAtual) {
-                    manager.saAtual.colaborador = {
-                        matricula: colaborador.matricula,
-                        nome: colaborador.colaborador,
-                        cpf: colaborador.cpf,
-                        funcao: colaborador.funcao,
-                        filial: colaborador.filial,
-                        centroCusto: colaborador.centroCusto
-                    };
+            try {
+                const colaborador = await manager.buscarColaborador(matricula);
+                if (colaborador) {
+                    document.getElementById('colaborador').value = colaborador.colaborador;
+                    document.getElementById('cpf').value = colaborador.cpf;
+                    document.getElementById('funcao').value = colaborador.funcao;
+                    document.getElementById('filial').value = colaborador.filial;
+                    document.getElementById('centroCusto').value = colaborador.centroCusto;
+                    
+                    if (manager.saAtual) {
+                        manager.saAtual.colaborador = {
+                            matricula: colaborador.matricula,
+                            nome: colaborador.colaborador,
+                            cpf: colaborador.cpf,
+                            funcao: colaborador.funcao,
+                            filial: colaborador.filial,
+                            centroCusto: colaborador.centroCusto
+                        };
+                    }
+                } else {
+                    alert('⚠️ Colaborador não encontrado!');
+                    document.getElementById('colaborador').value = '';
+                    document.getElementById('cpf').value = '';
+                    document.getElementById('funcao').value = '';
+                    document.getElementById('filial').value = '';
+                    document.getElementById('centroCusto').value = '';
                 }
-            } else {
-                alert('⚠️ Colaborador não encontrado!');
-                document.getElementById('colaborador').value = '';
-                document.getElementById('cpf').value = '';
-                document.getElementById('funcao').value = '';
-                document.getElementById('filial').value = '';
-                document.getElementById('centroCusto').value = '';
+            } catch (error) {
+                alert('❌ Erro ao buscar colaborador: ' + error.message);
             }
         }
 
@@ -310,15 +329,19 @@
             if (!codigo) return;
             
             const row = input.closest('tr');
-            const material = await manager.buscarMaterial(codigo);
             
-            if (material) {
-                row.querySelector('.item-descricao').value = material.descricao;
-                row.querySelector('.item-armazem').value = material.armazem;
-            } else {
-                alert(`⚠️ Material com código "${codigo}" não encontrado!`);
-                row.querySelector('.item-descricao').value = '';
-                row.querySelector('.item-armazem').value = '';
+            try {
+                const material = await manager.buscarMaterial(codigo);
+                if (material) {
+                    row.querySelector('.item-descricao').value = material.descricao;
+                    row.querySelector('.item-armazem').value = material.armazem;
+                } else {
+                    alert(`⚠️ Material com código "${codigo}" não encontrado!`);
+                    row.querySelector('.item-descricao').value = '';
+                    row.querySelector('.item-armazem').value = '';
+                }
+            } catch (error) {
+                alert('❌ Erro ao buscar material: ' + error.message);
             }
         }
 
@@ -387,55 +410,52 @@
                 return;
             }
             
-            // Salvar dados do formulário
-            const sa = manager.saAtual;
-            
-            // Dados do colaborador
-            sa.colaborador = {
-                matricula: document.getElementById('matricula').value.trim(),
-                nome: document.getElementById('colaborador').value.trim(),
-                cpf: document.getElementById('cpf').value.trim(),
-                funcao: document.getElementById('funcao').value.trim(),
-                filial: document.getElementById('filial').value.trim(),
-                centroCusto: document.getElementById('centroCusto').value.trim()
-            };
-            
-            // Dados da solicitação
-            sa.solicitante = document.getElementById('solicitante').value.trim();
-            sa.dataSolicitacao = document.getElementById('dataSolicitacao').value;
-            
-            // Itens
-            sa.itens = [];
-            document.querySelectorAll('#itemsBody tr').forEach(row => {
-                const codigo = row.querySelector('.item-codigo').value.trim();
-                const descricao = row.querySelector('.item-descricao').value.trim();
-                const unidadeMedida = row.querySelector('.item-unidade').value.trim();
-                const quantidade = parseInt(row.querySelector('.item-quantidade').value) || 0;
-                const armazem = row.querySelector('.item-armazem').value.trim();
-                const ca = row.querySelector('.item-ca').value.trim();
-                
-                if (codigo && descricao) {
-                    sa.itens.push({ codigo, descricao, unidadeMedida, quantidade, armazem, ca });
-                }
-            });
-            
-            // Validar campos obrigatórios
-            if (!sa.colaborador.matricula || !sa.colaborador.nome || !sa.colaborador.cpf) {
-                alert('⚠️ Preencha todos os dados do colaborador!');
-                return;
-            }
-            
-            if (!sa.solicitante) {
-                alert('⚠️ Informe o solicitante!');
-                return;
-            }
-            
-            if (sa.itens.length === 0) {
-                alert('⚠️ Adicione pelo menos um item!');
-                return;
-            }
-            
             try {
+                // Salvar dados do formulário
+                const sa = manager.saAtual;
+                
+                sa.colaborador = {
+                    matricula: document.getElementById('matricula').value.trim(),
+                    nome: document.getElementById('colaborador').value.trim(),
+                    cpf: document.getElementById('cpf').value.trim(),
+                    funcao: document.getElementById('funcao').value.trim(),
+                    filial: document.getElementById('filial').value.trim(),
+                    centroCusto: document.getElementById('centroCusto').value.trim()
+                };
+                
+                sa.solicitante = document.getElementById('solicitante').value.trim();
+                sa.dataSolicitacao = document.getElementById('dataSolicitacao').value;
+                
+                sa.itens = [];
+                document.querySelectorAll('#itemsBody tr').forEach(row => {
+                    const codigo = row.querySelector('.item-codigo').value.trim();
+                    const descricao = row.querySelector('.item-descricao').value.trim();
+                    const unidadeMedida = row.querySelector('.item-unidade').value.trim();
+                    const quantidade = parseInt(row.querySelector('.item-quantidade').value) || 0;
+                    const armazem = row.querySelector('.item-armazem').value.trim();
+                    const ca = row.querySelector('.item-ca').value.trim();
+                    
+                    if (codigo && descricao) {
+                        sa.itens.push({ codigo, descricao, unidadeMedida, quantidade, armazem, ca });
+                    }
+                });
+                
+                // Validar campos obrigatórios
+                if (!sa.colaborador.matricula || !sa.colaborador.nome || !sa.colaborador.cpf) {
+                    alert('⚠️ Preencha todos os dados do colaborador!');
+                    return;
+                }
+                
+                if (!sa.solicitante) {
+                    alert('⚠️ Informe o solicitante!');
+                    return;
+                }
+                
+                if (sa.itens.length === 0) {
+                    alert('⚠️ Adicione pelo menos um item!');
+                    return;
+                }
+                
                 // Salvar dados no D1
                 await manager.salvarSA();
                 

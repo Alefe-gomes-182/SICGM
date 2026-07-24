@@ -20,14 +20,12 @@ class SAManager {
         this.saAtual = null;
         this.signaturePad = null;
         this.tipoAssinatura = null;
-        this.modoOffline = false; // Flag para modo offline
     }
 
     // ============================================
     // CONSULTAS LOCAIS (arquivos .txt)
     // ============================================
 
-    // Verificar se usuário pode gerar SA (todos no arquivo)
     async verificarPermissaoGerar(usuario) {
         try {
             const response = await fetch(SA_CONFIG.usuariosAutorizadosPath);
@@ -46,11 +44,10 @@ class SAManager {
             return false;
         } catch (error) {
             console.error('Erro ao verificar permissão:', error);
-            return false;
+            throw new Error('Erro ao verificar permissão do usuário');
         }
     }
 
-    // Buscar informações do usuário logado no arquivo de autorizados
     async buscarUsuarioAutorizado(nome) {
         try {
             const response = await fetch(SA_CONFIG.usuariosAutorizadosPath);
@@ -74,11 +71,10 @@ class SAManager {
             return null;
         } catch (error) {
             console.error('Erro ao buscar usuário autorizado:', error);
-            return null;
+            throw new Error('Erro ao buscar usuário autorizado');
         }
     }
 
-    // Buscar colaborador por matrícula
     async buscarColaborador(matricula) {
         try {
             const response = await fetch(SA_CONFIG.colaboradoresPath);
@@ -101,21 +97,18 @@ class SAManager {
             return null;
         } catch (error) {
             console.error('Erro ao buscar colaborador:', error);
-            return null;
+            throw new Error('Erro ao buscar colaborador');
         }
     }
 
-    // Buscar material por código
     async buscarMaterial(codigo) {
         try {
             const response = await fetch(SA_CONFIG.materiaisPath);
             const data = await response.text();
             const linhas = data.split('\n').filter(line => line.trim());
             
-            // Pular cabeçalho (primeira linha)
             for (let i = 1; i < linhas.length; i++) {
                 const colunas = linhas[i].split('\t').map(c => c.trim());
-                // Formato: Codigo	Armazem	Descricao
                 if (colunas.length >= 3) {
                     if (colunas[0] === codigo) {
                         return {
@@ -129,7 +122,7 @@ class SAManager {
             return null;
         } catch (error) {
             console.error('Erro ao buscar material:', error);
-            return null;
+            throw new Error('Erro ao buscar material');
         }
     }
 
@@ -152,131 +145,15 @@ class SAManager {
             
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Erro na requisição');
+                throw new Error(error.error || `Erro ${response.status}: ${response.statusText}`);
             }
             
             return await response.json();
         } catch (error) {
-            console.error('Erro na requisição:', error);
-            console.warn('⚠️ Modo offline ativado - usando dados locais');
-            this.modoOffline = true;
-            
-            // Retornar dados mockados para desenvolvimento
-            return this.getDadosMock(endpoint, options);
+            console.error('❌ Erro na requisição:', error);
+            // Lançar o erro para ser tratado pelo chamador
+            throw new Error(`Não foi possível conectar à API: ${error.message}`);
         }
-    }
-
-    // Dados mockados para desenvolvimento offline
-    getDadosMock(endpoint, options) {
-        console.log('📦 Usando dados mockados para:', endpoint);
-        
-        if (endpoint === '/sa' && options.method === 'GET') {
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            if (dadosSalvos) {
-                return JSON.parse(dadosSalvos);
-            }
-            return [];
-        }
-        
-        if (endpoint === '/sa' && options.method === 'POST') {
-            const body = JSON.parse(options.body || '{}');
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
-            
-            const novoNumero = lista.length > 0 ? Math.max(...lista.map(s => s.numero)) + 1 : 1;
-            const novaSA = {
-                id: Date.now(),
-                numero: novoNumero,
-                status: 'pendente',
-                criado_por: body.criadoPor || 'Sistema',
-                criado_em: new Date().toISOString(),
-                colaborador_nome: body.colaborador?.nome || '',
-                colaborador_matricula: body.colaborador?.matricula || '',
-                solicitante: body.solicitante || '',
-                data_solicitacao: body.dataSolicitacao || new Date().toISOString().split('T')[0],
-                finalizado: false,
-                itens: body.itens || [],
-                termoResponsabilidade: {
-                    entreguePor: null,
-                    recebidoPor: null
-                }
-            };
-            
-            lista.push(novaSA);
-            localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
-            
-            return { success: true, numero: novoNumero };
-        }
-        
-        if (endpoint.match(/^\/sa\/\d+$/) && options.method === 'PUT') {
-            const numero = parseInt(endpoint.split('/')[2]);
-            const body = JSON.parse(options.body || '{}');
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
-            
-            const index = lista.findIndex(s => s.numero === numero);
-            if (index !== -1) {
-                lista[index] = { ...lista[index], ...body };
-                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
-            }
-            
-            return { success: true };
-        }
-        
-        if (endpoint.match(/^\/sa\/\d+\/assinatura$/) && options.method === 'POST') {
-            const numero = parseInt(endpoint.split('/')[2]);
-            const body = JSON.parse(options.body || '{}');
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
-            
-            const index = lista.findIndex(s => s.numero === numero);
-            if (index !== -1) {
-                const sa = lista[index];
-                if (!sa.termoResponsabilidade) {
-                    sa.termoResponsabilidade = { entreguePor: null, recebidoPor: null };
-                }
-                
-                if (body.tipo === 'entregue') {
-                    sa.termoResponsabilidade.entreguePor = {
-                        nome: body.nome,
-                        assinatura: body.assinatura,
-                        data: new Date().toISOString()
-                    };
-                } else if (body.tipo === 'recebido') {
-                    sa.termoResponsabilidade.recebidoPor = {
-                        nome: body.nome,
-                        assinatura: body.assinatura,
-                        data: new Date().toISOString()
-                    };
-                }
-                
-                // Verificar se ambas assinaturas foram feitas
-                if (sa.termoResponsabilidade.entreguePor && sa.termoResponsabilidade.recebidoPor) {
-                    sa.status = 'assinado';
-                }
-                
-                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
-            }
-            
-            return { success: true };
-        }
-        
-        if (endpoint.match(/^\/sa\/\d+\/finalizar$/) && options.method === 'POST') {
-            const numero = parseInt(endpoint.split('/')[2]);
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
-            
-            const index = lista.findIndex(s => s.numero === numero);
-            if (index !== -1) {
-                lista[index].status = 'finalizado';
-                lista[index].finalizado = true;
-                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
-            }
-            
-            return { success: true };
-        }
-        
-        return {};
     }
 
     // Carregar usuário logado
@@ -287,7 +164,7 @@ class SAManager {
             return this.usuarioAtual;
         }
         
-        // Fallback para desenvolvimento
+        // Fallback apenas para desenvolvimento
         this.usuarioAtual = {
             nome: 'ALEFE PEREIRA DA SILVA GOMES',
             matricula: '171309',
@@ -301,12 +178,14 @@ class SAManager {
     async listarSA() {
         try {
             const resultado = await this.request('/sa');
-            return resultado;
+            // Garantir que retorna um array
+            if (Array.isArray(resultado)) {
+                return resultado;
+            }
+            throw new Error('Resposta da API não é um array');
         } catch (error) {
-            console.error('Erro ao listar SA:', error);
-            // Tentar carregar do localStorage
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            return dadosSalvos ? JSON.parse(dadosSalvos) : [];
+            console.error('❌ Erro ao listar SA:', error);
+            throw error;
         }
     }
 
@@ -314,16 +193,13 @@ class SAManager {
     async buscarSA(numero) {
         try {
             const resultado = await this.request(`/sa/${numero}`);
-            return resultado;
-        } catch (error) {
-            console.error('Erro ao buscar SA:', error);
-            // Tentar carregar do localStorage
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            if (dadosSalvos) {
-                const lista = JSON.parse(dadosSalvos);
-                return lista.find(s => s.numero === numero) || null;
+            if (resultado && typeof resultado === 'object') {
+                return resultado;
             }
-            return null;
+            throw new Error('S.A. não encontrada');
+        } catch (error) {
+            console.error(`❌ Erro ao buscar SA #${numero}:`, error);
+            throw error;
         }
     }
 
@@ -351,20 +227,22 @@ class SAManager {
                 body: JSON.stringify(data)
             });
             
-            if (result.success) {
+            if (result && result.success) {
                 this.saAtual = await this.buscarSA(result.numero);
                 return this.saAtual;
             }
-            return null;
+            throw new Error('Erro ao criar S.A.: resposta inválida');
         } catch (error) {
-            console.error('Erro ao criar SA:', error);
+            console.error('❌ Erro ao criar SA:', error);
             throw error;
         }
     }
 
     // Salvar SA
     async salvarSA() {
-        if (!this.saAtual) return false;
+        if (!this.saAtual) {
+            throw new Error('Nenhuma S.A. carregada para salvar');
+        }
         
         try {
             await this.request(`/sa/${this.saAtual.numero}`, {
@@ -373,17 +251,8 @@ class SAManager {
             });
             return true;
         } catch (error) {
-            console.error('Erro ao salvar SA:', error);
-            // Salvar no localStorage como fallback
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            const lista = dadosSalvos ? JSON.parse(dadosSalvos) : [];
-            const index = lista.findIndex(s => s.numero === this.saAtual.numero);
-            if (index !== -1) {
-                lista[index] = this.saAtual;
-                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
-                return true;
-            }
-            return false;
+            console.error('❌ Erro ao salvar SA:', error);
+            throw error;
         }
     }
 
@@ -395,22 +264,16 @@ class SAManager {
             });
             return true;
         } catch (error) {
-            console.error('Erro ao excluir SA:', error);
-            // Excluir do localStorage como fallback
-            const dadosSalvos = localStorage.getItem('sa_emergencial_mock');
-            if (dadosSalvos) {
-                let lista = JSON.parse(dadosSalvos);
-                lista = lista.filter(s => s.numero !== numero);
-                localStorage.setItem('sa_emergencial_mock', JSON.stringify(lista));
-                return true;
-            }
-            return false;
+            console.error('❌ Erro ao excluir SA:', error);
+            throw error;
         }
     }
 
     // Assinar documento
     async assinarDocumento(tipo, nome, assinaturaData) {
-        if (!this.saAtual) return false;
+        if (!this.saAtual) {
+            throw new Error('Nenhuma S.A. carregada para assinar');
+        }
         
         try {
             await this.request(`/sa/${this.saAtual.numero}/assinatura`, {
@@ -425,14 +288,24 @@ class SAManager {
             this.saAtual = await this.buscarSA(this.saAtual.numero);
             return true;
         } catch (error) {
-            console.error('Erro ao assinar documento:', error);
+            console.error('❌ Erro ao assinar documento:', error);
             throw error;
         }
     }
 
     // Finalizar SA
     async finalizarSA() {
-        if (!this.saAtual) return false;
+        if (!this.saAtual) {
+            throw new Error('Nenhuma S.A. carregada para finalizar');
+        }
+        
+        // Verificar se ambas assinaturas foram feitas
+        const entregue = this.saAtual.termoResponsabilidade?.entreguePor;
+        const recebido = this.saAtual.termoResponsabilidade?.recebidoPor;
+        
+        if (!entregue || !recebido) {
+            throw new Error('Documento precisa ser assinado por ambas as partes');
+        }
         
         try {
             await this.request(`/sa/${this.saAtual.numero}/finalizar`, {
@@ -442,7 +315,7 @@ class SAManager {
             this.saAtual = await this.buscarSA(this.saAtual.numero);
             return true;
         } catch (error) {
-            console.error('Erro ao finalizar SA:', error);
+            console.error('❌ Erro ao finalizar SA:', error);
             throw error;
         }
     }
@@ -451,9 +324,20 @@ class SAManager {
     // FUNÇÕES DE UI
     // ============================================
 
-    // Renderizar lista de SA
     renderizarLista(dados, container) {
-        if (!dados || dados.length === 0) {
+        // Garantir que dados é um array
+        if (!Array.isArray(dados)) {
+            console.error('❌ dados não é um array:', dados);
+            container.innerHTML = `
+                <div class="empty-state" style="color: #f44336;">
+                    <p>❌ Erro ao carregar lista de S.A.</p>
+                    <p style="font-size: 14px; color: #999;">Os dados retornados não são válidos</p>
+                </div>
+            `;
+            return;
+        }
+        
+        if (dados.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <p>📋 Nenhuma S.A. Emergencial encontrada.</p>
@@ -480,14 +364,14 @@ class SAManager {
             const statusLabel = doc.status === 'finalizado' ? '✅ Finalizado' :
                               doc.status === 'assinado' ? '✍️ Assinado' : '⏳ Pendente';
             
-            const dataFormatada = new Date(doc.criado_em).toLocaleDateString('pt-BR');
+            const dataFormatada = doc.criado_em ? new Date(doc.criado_em).toLocaleDateString('pt-BR') : '-';
             
             html += `
                 <div class="sa-list-item" data-numero="${doc.numero}" 
                      onclick="window.location.href='formulario.html?numero=${doc.numero}'">
                     <span class="sa-number">#${String(doc.numero).padStart(4, '0')}</span>
                     <span>${doc.colaborador_nome || 'Não definido'}</span>
-                    <span>${doc.criado_por}</span>
+                    <span>${doc.criado_por || 'Sistema'}</span>
                     <span><span class="sa-status ${statusClass}">${statusLabel}</span></span>
                     <span>${dataFormatada}</span>
                 </div>
@@ -547,13 +431,15 @@ class SAManager {
             return;
         }
         
-        const assinaturaData = this.signaturePad.toDataURL();
-        
-        await this.assinarDocumento(this.tipoAssinatura, nome, assinaturaData);
-        this.fecharModalAssinatura();
-        this.atualizarVisualizacaoAssinaturas();
-        
-        alert('✅ Assinatura realizada com sucesso!');
+        try {
+            const assinaturaData = this.signaturePad.toDataURL();
+            await this.assinarDocumento(this.tipoAssinatura, nome, assinaturaData);
+            this.fecharModalAssinatura();
+            this.atualizarVisualizacaoAssinaturas();
+            alert('✅ Assinatura realizada com sucesso!');
+        } catch (error) {
+            alert('❌ Erro ao assinar: ' + error.message);
+        }
     }
 
     atualizarVisualizacaoAssinaturas() {

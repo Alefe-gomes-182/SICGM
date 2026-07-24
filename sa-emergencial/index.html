@@ -44,80 +44,104 @@
             window.location.href = '../home-gestao.html';
         }
 
+        // Função para mostrar erro na tela
+        function mostrarErro(container, mensagem) {
+            container.innerHTML = `
+                <div class="empty-state" style="color: #f44336; padding: 40px;">
+                    <p style="font-size: 24px;">❌ Erro</p>
+                    <p style="font-size: 16px; color: #666; margin: 10px 0;">${mensagem}</p>
+                    <p style="font-size: 14px; color: #999; margin-top: 20px;">
+                        Verifique se a API está disponível ou tente novamente mais tarde.
+                    </p>
+                    <button onclick="window.location.reload()" style="margin-top: 20px; padding: 10px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        🔄 Tentar Novamente
+                    </button>
+                </div>
+            `;
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             const manager = window.saManager;
+            const container = document.getElementById('saList');
             
-            // Carregar usuário
-            const usuario = await manager.carregarUsuarioLogado();
-            
-            // Buscar informações completas do usuário no arquivo de autorizados
-            const userInfo = await manager.buscarUsuarioAutorizado(usuario.nome);
-            
-            if (userInfo) {
-                document.getElementById('userName').textContent = userInfo.nome;
-                document.getElementById('userRole').textContent = userInfo.funcao || 'Usuário';
-                document.getElementById('userMatricula').textContent = `Matrícula: ${userInfo.matricula}`;
-                document.getElementById('userAvatar').textContent = userInfo.nome.charAt(0);
+            try {
+                // Carregar usuário
+                const usuario = await manager.carregarUsuarioLogado();
                 
-                // Atualizar usuário com informações completas
-                usuario.matricula = userInfo.matricula;
-                usuario.cpf = userInfo.cpf;
-                usuario.funcao = userInfo.funcao;
-                sessionStorage.setItem('usuarioLogado', JSON.stringify(usuario));
-            } else {
-                document.getElementById('userName').textContent = usuario.nome;
-                document.getElementById('userRole').textContent = usuario.funcao || 'Usuário';
-                document.getElementById('userMatricula').textContent = `Matrícula: ${usuario.matricula || '---'}`;
-                document.getElementById('userAvatar').textContent = usuario.nome.charAt(0);
-            }
-            
-            // Verificar permissão para criar SA (todos no arquivo)
-            const podeCriar = await manager.verificarPermissaoGerar(usuario);
-            const btnNova = document.getElementById('btnNovaSA');
-            
-            if (!podeCriar) {
-                btnNova.disabled = true;
-                btnNova.title = 'Apenas usuários cadastrados podem criar SA';
-                btnNova.style.opacity = '0.5';
-                btnNova.textContent = '🔒 Nova S.A. (Sem permissão)';
-            }
-            
-            // Carregar lista
-            const dados = await manager.listarSA();
-            manager.renderizarLista(dados, document.getElementById('saList'));
-            
-            // Evento: Nova SA - AGORA APENAS CRIA E RECARREGA A LISTA
-            btnNova.addEventListener('click', async function() {
+                // Buscar informações completas do usuário no arquivo de autorizados
+                const userInfo = await manager.buscarUsuarioAutorizado(usuario.nome);
+                
+                if (userInfo) {
+                    document.getElementById('userName').textContent = userInfo.nome;
+                    document.getElementById('userRole').textContent = userInfo.funcao || 'Usuário';
+                    document.getElementById('userMatricula').textContent = `Matrícula: ${userInfo.matricula}`;
+                    document.getElementById('userAvatar').textContent = userInfo.nome.charAt(0);
+                    
+                    usuario.matricula = userInfo.matricula;
+                    usuario.cpf = userInfo.cpf;
+                    usuario.funcao = userInfo.funcao;
+                    sessionStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+                } else {
+                    document.getElementById('userName').textContent = usuario.nome;
+                    document.getElementById('userRole').textContent = usuario.funcao || 'Usuário';
+                    document.getElementById('userMatricula').textContent = `Matrícula: ${usuario.matricula || '---'}`;
+                    document.getElementById('userAvatar').textContent = usuario.nome.charAt(0);
+                }
+                
+                // Verificar permissão para criar SA
+                const podeCriar = await manager.verificarPermissaoGerar(usuario);
+                const btnNova = document.getElementById('btnNovaSA');
+                
                 if (!podeCriar) {
-                    alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
-                    return;
+                    btnNova.disabled = true;
+                    btnNova.title = 'Apenas usuários cadastrados podem criar SA';
+                    btnNova.style.opacity = '0.5';
+                    btnNova.textContent = '🔒 Nova S.A. (Sem permissão)';
                 }
                 
-                try {
-                    const novaSA = await manager.criarSA(usuario);
-                    if (novaSA) {
-                        alert(`✅ S.A. #${String(novaSA.numero).padStart(4, '0')} criada com sucesso!`);
-                        // Recarregar a lista
-                        const dadosAtualizados = await manager.listarSA();
-                        manager.renderizarLista(dadosAtualizados, document.getElementById('saList'));
+                // Carregar lista
+                const dados = await manager.listarSA();
+                manager.renderizarLista(dados, container);
+                
+                // Evento: Nova SA
+                btnNova.addEventListener('click', async function() {
+                    if (!podeCriar) {
+                        alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
+                        return;
                     }
-                } catch (error) {
-                    alert('❌ Erro ao criar S.A.: ' + error.message);
-                }
-            });
-            
-            // Evento: Excluir SA
-            document.getElementById('btnExcluir').addEventListener('click', function() {
-                const numero = prompt('Digite o número da S.A. que deseja excluir:');
-                if (numero && confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${numero}?`)) {
-                    manager.excluirSA(parseInt(numero)).then(() => {
-                        manager.listarSA().then(dados => {
-                            manager.renderizarLista(dados, document.getElementById('saList'));
-                        });
-                        alert('✅ S.A. excluída com sucesso!');
-                    });
-                }
-            });
+                    
+                    try {
+                        const novaSA = await manager.criarSA(usuario);
+                        if (novaSA) {
+                            alert(`✅ S.A. #${String(novaSA.numero).padStart(4, '0')} criada com sucesso!`);
+                            const dadosAtualizados = await manager.listarSA();
+                            manager.renderizarLista(dadosAtualizados, container);
+                        }
+                    } catch (error) {
+                        alert('❌ Erro ao criar S.A.: ' + error.message);
+                    }
+                });
+                
+                // Evento: Excluir SA
+                document.getElementById('btnExcluir').addEventListener('click', function() {
+                    const numero = prompt('Digite o número da S.A. que deseja excluir:');
+                    if (numero && confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${numero}?`)) {
+                        manager.excluirSA(parseInt(numero))
+                            .then(() => manager.listarSA())
+                            .then(dados => {
+                                manager.renderizarLista(dados, container);
+                                alert('✅ S.A. excluída com sucesso!');
+                            })
+                            .catch(error => {
+                                alert('❌ Erro ao excluir: ' + error.message);
+                            });
+                    }
+                });
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar página:', error);
+                mostrarErro(container, error.message || 'Erro ao carregar dados do servidor');
+            }
         });
     </script>
 </body>
