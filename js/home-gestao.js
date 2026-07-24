@@ -45,24 +45,16 @@ const DEPARTAMENTOS = {
     },
     'DMPC': {
         nome: 'DMPC',
-        titulo: 'Departamento de Materiais e Patrimônio',
-        descricao: 'Gerencie contagens diárias, S.A. emergencial e relatórios do departamento.',
+        titulo: 'Departamento de Materiais e Patrimônio Controlado',
+        descricao: 'Gerencie S.A. emergencial e relatórios do departamento.',
         funcoes: [
-            {
-                id: 'contagem-diaria-dmpc',
-                nome: 'Contagem Diária',
-                icone: '📊',
-                link: '#',
-                status: 'desenvolvimento',
-                descricao: 'Registre e visualize as contagens diárias (em desenvolvimento)'
-            },
             {
                 id: 'sa-emergencial-dmpc',
                 nome: 'S.A. Emergencial',
                 icone: '🚨',
-                link: '#',
-                status: 'desenvolvimento',
-                descricao: 'Solicitação de atendimento emergencial (em desenvolvimento)'
+                link: 'sa-emergencial/index.html',
+                status: 'disponivel',
+                descricao: 'Solicitação de Atendimento Emergencial - Gerencie solicitações'
             },
             {
                 id: 'relatorios-dmpc',

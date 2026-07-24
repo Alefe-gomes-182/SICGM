@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.A. Emergencial - Painel de Controle</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/sa-emergencial.css">
+</head>
+<body>
+    <div class="sa-panel">
+        <!-- Header do Usuário -->
+        <div class="user-header" id="userHeader">
+            <div class="user-info">
+                <div class="avatar" id="userAvatar">U</div>
+                <div class="user-details">
+                    <h3 id="userName">Carregando...</h3>
+                    <p id="userRole">Carregando...</p>
+                    <p id="userMatricula" style="font-size: 12px; opacity: 0.8;">Matrícula: ---</p>
+                </div>
+            </div>
+            <div class="user-actions">
+                <button class="btn-primary" id="btnNovaSA">➕ Nova S.A.</button>
+                <button class="btn-danger" id="btnExcluir">🗑️ Excluir</button>
+                <button class="btn-secondary" onclick="window.location.href='../index.html'">🏠 Voltar</button>
+            </div>
+        </div>
+
+        <!-- Lista de SA -->
+        <div class="sa-list-container">
+            <div id="saList">
+                <div class="empty-state">
+                    <p>⏳ Carregando S.A. Emergenciais...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="../js/sa-emergencial.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const manager = window.saManager;
+            
+            // Carregar usuário
+            const usuario = await manager.carregarUsuarioLogado();
+            
+            // Buscar informações completas do usuário no arquivo de autorizados
+            const userInfo = await manager.buscarUsuarioAutorizado(usuario.nome);
+            
+            if (userInfo) {
+                document.getElementById('userName').textContent = userInfo.nome;
+                document.getElementById('userRole').textContent = userInfo.funcao || 'Usuário';
+                document.getElementById('userMatricula').textContent = `Matrícula: ${userInfo.matricula}`;
+                document.getElementById('userAvatar').textContent = userInfo.nome.charAt(0);
+                
+                // Atualizar usuário com informações completas
+                usuario.matricula = userInfo.matricula;
+                usuario.cpf = userInfo.cpf;
+                usuario.funcao = userInfo.funcao;
+                sessionStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+            } else {
+                document.getElementById('userName').textContent = usuario.nome;
+                document.getElementById('userRole').textContent = usuario.funcao || 'Usuário';
+                document.getElementById('userMatricula').textContent = `Matrícula: ${usuario.matricula || '---'}`;
+                document.getElementById('userAvatar').textContent = usuario.nome.charAt(0);
+            }
+            
+            // Verificar permissão para criar SA (todos no arquivo)
+            const podeCriar = await manager.verificarPermissaoGerar(usuario);
+            const btnNova = document.getElementById('btnNovaSA');
+            
+            if (!podeCriar) {
+                btnNova.disabled = true;
+                btnNova.title = 'Apenas usuários cadastrados podem criar SA';
+                btnNova.style.opacity = '0.5';
+                btnNova.textContent = '🔒 Nova S.A. (Sem permissão)';
+            }
+            
+            // Carregar lista
+            const dados = await manager.listarSA();
+            manager.renderizarLista(dados, document.getElementById('saList'));
+            
+            // Evento: Nova SA
+            btnNova.addEventListener('click', function() {
+                if (!podeCriar) {
+                    alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
+                    return;
+                }
+                window.location.href = 'formulario.html';
+            });
+            
+            // Evento: Excluir SA
+            document.getElementById('btnExcluir').addEventListener('click', function() {
+                const numero = prompt('Digite o número da S.A. que deseja excluir:');
+                if (numero && confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${numero}?`)) {
+                    manager.excluirSA(parseInt(numero)).then(() => {
+                        manager.listarSA().then(dados => {
+                            manager.renderizarLista(dados, document.getElementById('saList'));
+                        });
+                        alert('✅ S.A. excluída com sucesso!');
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

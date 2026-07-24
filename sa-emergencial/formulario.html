@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.A. Emergencial - Formulário</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/sa-emergencial.css">
+</head>
+<body>
+    <div class="sa-form">
+        <div class="sa-form-header">
+            <h1>📋 S.A. Emergencial</h1>
+            <span class="sa-numero" id="saNumero">#0000</span>
+        </div>
+        
+        <div class="sa-form-body">
+            <!-- Dados do Colaborador -->
+            <h3>👤 Dados do Colaborador</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>MATRÍCULA *</label>
+                    <input type="text" id="matricula" placeholder="Digite a matrícula" onchange="buscarColaborador()">
+                </div>
+                <div class="form-group">
+                    <label>COLABORADOR *</label>
+                    <input type="text" id="colaborador" readonly>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>CPF *</label>
+                    <input type="text" id="cpf" readonly>
+                </div>
+                <div class="form-group">
+                    <label>FUNÇÃO *</label>
+                    <input type="text" id="funcao" readonly>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>FILIAL *</label>
+                    <input type="text" id="filial" readonly>
+                </div>
+                <div class="form-group">
+                    <label>CENTRO DE CUSTO *</label>
+                    <input type="text" id="centroCusto" readonly>
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Dados da SA -->
+            <h3>📝 Dados da Solicitação</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>SOLICITANTE *</label>
+                    <input type="text" id="solicitante" placeholder="Nome do solicitante">
+                </div>
+                <div class="form-group">
+                    <label>DATA DA SOLICITAÇÃO</label>
+                    <input type="date" id="dataSolicitacao">
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Itens -->
+            <h3>📦 Itens</h3>
+            <table class="items-table" id="itemsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Código</th>
+                        <th style="width: 30%;">Descrição</th>
+                        <th style="width: 10%;">Unid.</th>
+                        <th style="width: 15%;">Quantidade</th>
+                        <th style="width: 15%;">Armazém</th>
+                        <th style="width: 10%;">C.A</th>
+                        <th style="width: 5%;"></th>
+                    </tr>
+                </thead>
+                <tbody id="itemsBody">
+                    <tr>
+                        <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código"></td>
+                        <td><input type="text" class="item-descricao" readonly placeholder="Descrição"></td>
+                        <td><input type="text" class="item-unidade" placeholder="Unid."></td>
+                        <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0"></td>
+                        <td><input type="text" class="item-armazem" readonly placeholder="Armazém"></td>
+                        <td><input type="text" class="item-ca" placeholder="C.A"></td>
+                        <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="add-item-btn" onclick="adicionarLinhaItem()">➕ Adicionar Item</button>
+
+            <hr>
+
+            <!-- Termo de Responsabilidade -->
+            <div class="termo-responsabilidade">
+                <h3>📜 TERMO DE RESPONSABILIDADE</h3>
+                <div class="termo-text">
+                    <p><strong>NR 06</strong><br>
+                    6.7. CABE AO EMPREGADO:<br>
+                    6.7.1. CABE AO EMPREGADO QUANTO AO EPI:<br>
+                    A) USAR, UTILIZANDO-O APENAS PARA A FINALIDADE A QUE SE DESTINA;<br>
+                    B) RESPONSABILIZAR-SE PELA GUARDA E CONSERVAÇÃO;<br>
+                    C) COMUNICAR AO EMPREGADOR QUALQUER ALTERAÇÃO QUE O TORNE IMPRÓPRIO PARA USO; E,<br>
+                    D) CUMPRIR AS DETERMINAÇÕES DO EMPREGADOR SOBRE O USO ADEQUADO.</p>
+
+                    <p><strong>NR 01</strong><br>
+                    1.8. CABE AO EMPREGADO:<br>
+                    A) CUMPRIR AS DISPOSIÇÕES LEGAIS E REGULAMENTARES SOBRE SEGURANÇA E MEDICINA DO TRABALHO, INCLUSIVE AS ORDENS DE SERVIÇO EXPEDIDAS PELO EMPREGADOR;<br>
+                    B) USAR O EPI FORNECIDO PELO EMPREGADOR;<br>
+                    C) SUBMETER-SE AOS EXAMES MÉDICOS PREVISTOS NAS NORMAS REGULAMENTADORAS - NR;<br>
+                    D) COLABORAR COM A EMPRESA NA APLICAÇÃO DAS NORMAS REGULAMENTADORAS – NR.<br>
+                    1.8.1. CONSTITUI ATO FALTOSO A RECUSA INJUSTIFICADA DO EMPREGADO AO CUMPRIMENTO DO DISPOSTO NO ITEM ANTERIOR.</p>
+
+                    <p><strong>CLT:</strong><br>
+                    ART. 462, § 1º - EM CASO DE DANO CAUSADO PELO EMPREGADO, O DESCONTO SERÁ LÍCITO, DESDE QUE ESTA POSSIBILIDADE TENHA SIDO ACORDADA OU NA OCORRÊNCIA DE DOLO DO EMPREGADO.</p>
+
+                    <p>Declaro para os devidos fins que recebi da CONTROL CONSTRUÇÕES LTDA, os Equipamentos de Proteção Individual acima descritos, novos e em perfeitas condições de uso, tendo sido treinado quanto ao seu uso adequado, bem como, que estou ciente das obrigações descritas na NR 06, baixada pela Portaria MTb 3214/78, subitem 6.7.1.</p>
+
+                    <p>Comprometo-me a bem cuidar da sua conservação e a restitui-los a empresa na eventualidade da rescisão de meu contrato de trabalho, antes de decorrido o prazo normal de utilização.</p>
+
+                    <p>Declaro, também, que estou ciente das disposições do Art. 462 e § 1º da CLT, e autorizo o desconto salarial proporcional ao custo de reparação do dano que os EPIs aos meus cuidados venham apresentar, seja por extravio, pelo uso inadequado e/ ou indevido.</p>
+
+                    <p>Declaro ainda que estou ciente de que seu uso é obrigatório sob pena de ser punido das disposições do artigo 158, alínea "a", da CLT, e do item 1.8 da NR 01, em especial daquela do subitem 1.8.1, de que constitui ato faltoso à recusa injustificada de usar EPI fornecido pela empresa, incorrendo nas penas da Lei cabíveis que irão desde simples advertências até a dispensa por justa causa (Art. 482 da C.L.T).</p>
+                </div>
+            </div>
+
+            <!-- Assinaturas -->
+            <div class="assinaturas">
+                <div class="assinatura-box" data-tipo="entregue">
+                    <h4>📤 ENTREGUE POR</h4>
+                    <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
+                    <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
+                    <img class="signature-img" style="display: none;" alt="Assinatura">
+                    <button class="btn-assinar" onclick="abrirModalAssinatura('entregue')">✍️ Assinar como Entregue</button>
+                </div>
+
+                <div class="assinatura-box" data-tipo="recebido">
+                    <h4>📥 RECEBIDO POR</h4>
+                    <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
+                    <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
+                    <img class="signature-img" style="display: none;" alt="Assinatura">
+                    <button class="btn-assinar" onclick="abrirModalAssinatura('recebido')">✍️ Assinar como Recebido</button>
+                </div>
+            </div>
+
+            <button class="btn-finalizar" onclick="finalizarSA()">✅ FINALIZAR S.A.</button>
+        </div>
+    </div>
+
+    <!-- Modal de Assinatura -->
+    <div class="signature-modal" id="signatureModal">
+        <div class="signature-box">
+            <h2>✍️ ASSINATURA</h2>
+            <p style="text-align: center; color: #666;">Assine no campo abaixo com o mouse ou dedo</p>
+            <p style="text-align: center; color: #1a237e; font-weight: bold;" id="signatureType">ENTREGUE POR</p>
+            
+            <div class="form-group">
+                <label>Nome do Signatário *</label>
+                <input type="text" id="signatureName" placeholder="Digite seu nome completo">
+            </div>
+            
+            <div class="signature-pad-container">
+                <canvas id="signatureCanvas"></canvas>
+            </div>
+            
+            <div class="signature-actions">
+                <button class="btn-clear" onclick="limparAssinatura()">🗑️ Limpar</button>
+                <button class="btn-confirm" onclick="confirmarAssinatura()">✅ Confirmar</button>
+                <button class="btn-cancel" onclick="fecharModalAssinatura()">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    <script src="../js/sa-emergencial.js"></script>
+    <script>
+        let manager;
+        let numeroSA = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            manager = window.saManager;
+            
+            // Verificar se é nova SA ou edição
+            const params = new URLSearchParams(window.location.search);
+            const numero = params.get('numero');
+            
+            await manager.carregarUsuarioLogado();
+            
+            if (numero) {
+                // Editar SA existente
+                numeroSA = parseInt(numero);
+                const sa = await manager.buscarSA(numeroSA);
+                if (sa) {
+                    manager.saAtual = sa;
+                    carregarDadosFormulario(sa);
+                } else {
+                    alert('❌ S.A. não encontrada!');
+                    window.location.href = 'index.html';
+                }
+            } else {
+                // Nova SA
+                const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
+                if (!podeCriar) {
+                    alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                const novaSA = await manager.criarSA(manager.usuarioAtual);
+                if (novaSA) {
+                    numeroSA = novaSA.numero;
+                    document.getElementById('saNumero').textContent = `#${String(numeroSA).padStart(4, '0')}`;
+                    document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
+                }
+            }
+            
+            // Inicializar Signature Pad
+            manager.initSignaturePad('signatureCanvas');
+            
+            // Atualizar assinaturas
+            manager.atualizarVisualizacaoAssinaturas();
+        });
+
+        function carregarDadosFormulario(sa) {
+            document.getElementById('saNumero').textContent = `#${String(sa.numero).padStart(4, '0')}`;
+            
+            // Dados do colaborador
+            const col = sa.colaborador || {};
+            document.getElementById('matricula').value = col.matricula || '';
+            document.getElementById('colaborador').value = col.nome || '';
+            document.getElementById('cpf').value = col.cpf || '';
+            document.getElementById('funcao').value = col.funcao || '';
+            document.getElementById('filial').value = col.filial || '';
+            document.getElementById('centroCusto').value = col.centroCusto || '';
+            
+            // Dados da solicitação
+            document.getElementById('solicitante').value = sa.solicitante || '';
+            document.getElementById('dataSolicitacao').value = sa.dataSolicitacao || '';
+            
+            // Itens
+            const tbody = document.getElementById('itemsBody');
+            tbody.innerHTML = '';
+            if (sa.itens && sa.itens.length > 0) {
+                sa.itens.forEach(item => {
+                    adicionarLinhaItem(item);
+                });
+            } else {
+                adicionarLinhaItem();
+            }
+        }
+
+        // ============================================
+        // FUNÇÕES DO FORMULÁRIO
+        // ============================================
+
+        async function buscarColaborador() {
+            const matricula = document.getElementById('matricula').value.trim();
+            if (!matricula) return;
+            
+            const colaborador = await manager.buscarColaborador(matricula);
+            if (colaborador) {
+                document.getElementById('colaborador').value = colaborador.colaborador;
+                document.getElementById('cpf').value = colaborador.cpf;
+                document.getElementById('funcao').value = colaborador.funcao;
+                document.getElementById('filial').value = colaborador.filial;
+                document.getElementById('centroCusto').value = colaborador.centroCusto;
+                
+                // Atualizar SA atual
+                if (manager.saAtual) {
+                    manager.saAtual.colaborador = {
+                        matricula: colaborador.matricula,
+                        nome: colaborador.colaborador,
+                        cpf: colaborador.cpf,
+                        funcao: colaborador.funcao,
+                        filial: colaborador.filial,
+                        centroCusto: colaborador.centroCusto
+                    };
+                }
+            } else {
+                alert('⚠️ Colaborador não encontrado!');
+                document.getElementById('colaborador').value = '';
+                document.getElementById('cpf').value = '';
+                document.getElementById('funcao').value = '';
+                document.getElementById('filial').value = '';
+                document.getElementById('centroCusto').value = '';
+            }
+        }
+
+        async function buscarMaterial(input) {
+            const codigo = input.value.trim();
+            if (!codigo) return;
+            
+            const row = input.closest('tr');
+            const material = await manager.buscarMaterial(codigo);
+            
+            if (material) {
+                row.querySelector('.item-descricao').value = material.descricao;
+                row.querySelector('.item-armazem').value = material.armazem;
+                // Unidade de medida fica em branco para preenchimento manual
+            } else {
+                alert(`⚠️ Material com código "${codigo}" não encontrado!`);
+                row.querySelector('.item-descricao').value = '';
+                row.querySelector('.item-armazem').value = '';
+            }
+        }
+
+        function adicionarLinhaItem(item = null) {
+            const tbody = document.getElementById('itemsBody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="item-codigo" onchange="buscarMaterial(this)" placeholder="Código" value="${item ? item.codigo : ''}"></td>
+                <td><input type="text" class="item-descricao" readonly placeholder="Descrição" value="${item ? item.descricao : ''}"></td>
+                <td><input type="text" class="item-unidade" placeholder="Unid." value="${item ? item.unidadeMedida : ''}"></td>
+                <td><input type="number" class="item-quantidade" placeholder="Qtd." min="0" value="${item ? item.quantidade : ''}"></td>
+                <td><input type="text" class="item-armazem" readonly placeholder="Armazém" value="${item ? item.armazem : ''}"></td>
+                <td><input type="text" class="item-ca" placeholder="C.A" value="${item ? item.ca : ''}"></td>
+                <td><button class="remove-item" onclick="removerItem(this)">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        function removerItem(btn) {
+            const row = btn.closest('tr');
+            if (document.getElementById('itemsBody').children.length > 1) {
+                row.remove();
+            } else {
+                alert('⚠️ É necessário ter pelo menos um item.');
+            }
+        }
+
+        // ============================================
+        // FUNÇÕES DE ASSINATURA
+        // ============================================
+
+        function abrirModalAssinatura(tipo) {
+            const nome = tipo === 'entregue' ? 
+                document.getElementById('colaborador').value : 
+                document.getElementById('solicitante').value;
+            
+            if (!nome) {
+                alert('⚠️ Preencha o nome do colaborador/solicitante antes de assinar.');
+                return;
+            }
+            
+            manager.abrirModalAssinatura(tipo, nome);
+        }
+
+        function fecharModalAssinatura() {
+            manager.fecharModalAssinatura();
+        }
+
+        function limparAssinatura() {
+            if (manager.signaturePad) {
+                manager.signaturePad.clear();
+            }
+        }
+
+        function confirmarAssinatura() {
+            manager.confirmarAssinatura();
+        }
+
+        // ============================================
+        // FINALIZAR SA
+        // ============================================
+
+        async function finalizarSA() {
+            if (!manager.saAtual) {
+                alert('❌ Erro: S.A. não encontrada.');
+                return;
+            }
+            
+            // Salvar dados do formulário
+            const sa = manager.saAtual;
+            
+            // Dados do colaborador
+            sa.colaborador = {
+                matricula: document.getElementById('matricula').value.trim(),
+                nome: document.getElementById('colaborador').value.trim(),
+                cpf: document.getElementById('cpf').value.trim(),
+                funcao: document.getElementById('funcao').value.trim(),
+                filial: document.getElementById('filial').value.trim(),
+                centroCusto: document.getElementById('centroCusto').value.trim()
+            };
+            
+            // Dados da solicitação
+            sa.solicitante = document.getElementById('solicitante').value.trim();
+            sa.dataSolicitacao = document.getElementById('dataSolicitacao').value;
+            
+            // Itens
+            sa.itens = [];
+            document.querySelectorAll('#itemsBody tr').forEach(row => {
+                const codigo = row.querySelector('.item-codigo').value.trim();
+                const descricao = row.querySelector('.item-descricao').value.trim();
+                const unidadeMedida = row.querySelector('.item-unidade').value.trim();
+                const quantidade = parseInt(row.querySelector('.item-quantidade').value) || 0;
+                const armazem = row.querySelector('.item-armazem').value.trim();
+                const ca = row.querySelector('.item-ca').value.trim();
+                
+                if (codigo && descricao) {
+                    sa.itens.push({ codigo, descricao, unidadeMedida, quantidade, armazem, ca });
+                }
+            });
+            
+            // Validar campos obrigatórios
+            if (!sa.colaborador.matricula || !sa.colaborador.nome || !sa.colaborador.cpf) {
+                alert('⚠️ Preencha todos os dados do colaborador!');
+                return;
+            }
+            
+            if (!sa.solicitante) {
+                alert('⚠️ Informe o solicitante!');
+                return;
+            }
+            
+            if (sa.itens.length === 0) {
+                alert('⚠️ Adicione pelo menos um item!');
+                return;
+            }
+            
+            try {
+                // Salvar dados no D1
+                await manager.salvarSA();
+                
+                // Finalizar (verifica assinaturas)
+                await manager.finalizarSA();
+                
+                alert('✅ S.A. finalizada com sucesso!');
+                window.location.href = 'index.html';
+            } catch (error) {
+                alert('❌ ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
