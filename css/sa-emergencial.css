@@ -949,3 +949,28 @@
         padding: 3px;
     }
 }
+/* ===== BOTÃO EXCLUIR NA LISTA ===== */
+.btn-excluir-item {
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    min-width: 40px;
+}
+
+.btn-excluir-item:hover {
+    background: #c62828;
+    transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+    .btn-excluir-item {
+        padding: 4px 10px;
+        font-size: 12px;
+        min-width: 32px;
+    }
+}

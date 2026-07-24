@@ -2,9 +2,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>S.A. Emergencial - Painel de Controle</title>
-    <!-- Favicon para evitar erro 404 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/sa-emergencial.css">
@@ -23,7 +22,6 @@
             </div>
             <div class="user-actions">
                 <button class="btn-primary" id="btnNovaSA">➕ Nova S.A.</button>
-                <button class="btn-danger" id="btnExcluir">🗑️ Excluir</button>
                 <button class="btn-secondary" onclick="voltarHome()">🏠 Voltar</button>
             </div>
         </div>
@@ -62,9 +60,88 @@
             `;
         }
 
+        // Função para excluir SA individual
+        async function excluirSA(numero, event) {
+            event.stopPropagation(); // Impedir de abrir o formulário
+            
+            if (confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${String(numero).padStart(4, '0')}?`)) {
+                try {
+                    const manager = window.saManager;
+                    await manager.excluirSA(numero);
+                    
+                    // Recarregar a lista
+                    const dados = await manager.listarSA();
+                    const container = document.getElementById('saList');
+                    manager.renderizarLista(dados, container);
+                    
+                    alert('✅ S.A. excluída com sucesso!');
+                } catch (error) {
+                    alert('❌ Erro ao excluir: ' + error.message);
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             const manager = window.saManager;
             const container = document.getElementById('saList');
+            
+            // Sobrescrever renderizarLista para incluir botão excluir
+            const renderizarListaOriginal = manager.renderizarLista.bind(manager);
+            manager.renderizarLista = function(dados, container) {
+                if (!Array.isArray(dados)) {
+                    container.innerHTML = `
+                        <div class="empty-state" style="color: #f44336;">
+                            <p>❌ Erro ao carregar lista de S.A.</p>
+                            <p style="font-size: 14px; color: #999;">Os dados retornados não são válidos</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (dados.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>📋 Nenhuma S.A. Emergencial encontrada.</p>
+                            <p>Clique em "Nova S.A." para criar a primeira.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = `
+                    <div class="sa-list-header">
+                        <span>Nº S.A.</span>
+                        <span>Colaborador</span>
+                        <span>Criado por</span>
+                        <span>Status</span>
+                        <span style="text-align: center;">Ações</span>
+                    </div>
+                `;
+                
+                dados.forEach(doc => {
+                    const statusClass = doc.status === 'finalizado' ? 'status-finalizado' : 
+                                      doc.status === 'assinado' ? 'status-assinado' : 'status-pendente';
+                    
+                    const statusLabel = doc.status === 'finalizado' ? '✅ Finalizado' :
+                                      doc.status === 'assinado' ? '✍️ Assinado' : '⏳ Pendente';
+                    
+                    html += `
+                        <div class="sa-list-item" data-numero="${doc.numero}">
+                            <span class="sa-number" onclick="window.location.href='formulario.html?numero=${doc.numero}'">#${String(doc.numero).padStart(4, '0')}</span>
+                            <span onclick="window.location.href='formulario.html?numero=${doc.numero}'">${doc.colaborador_nome || 'Não definido'}</span>
+                            <span onclick="window.location.href='formulario.html?numero=${doc.numero}'">${doc.criado_por || 'Sistema'}</span>
+                            <span onclick="window.location.href='formulario.html?numero=${doc.numero}'"><span class="sa-status ${statusClass}">${statusLabel}</span></span>
+                            <span style="text-align: center;">
+                                <button class="btn-excluir-item" onclick="excluirSA(${doc.numero}, event)" title="Excluir S.A.">
+                                    🗑️
+                                </button>
+                            </span>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+            };
             
             try {
                 // Carregar usuário
@@ -121,22 +198,6 @@
                         }
                     } catch (error) {
                         alert('❌ Erro ao criar S.A.: ' + error.message);
-                    }
-                });
-                
-                // Evento: Excluir SA
-                document.getElementById('btnExcluir').addEventListener('click', function() {
-                    const numero = prompt('Digite o número da S.A. que deseja excluir:');
-                    if (numero && confirm(`⚠️ Tem certeza que deseja excluir a S.A. #${numero}?`)) {
-                        manager.excluirSA(parseInt(numero))
-                            .then(() => manager.listarSA())
-                            .then(dados => {
-                                manager.renderizarLista(dados, container);
-                                alert('✅ S.A. excluída com sucesso!');
-                            })
-                            .catch(error => {
-                                alert('❌ Erro ao excluir: ' + error.message);
-                            });
                     }
                 });
                 

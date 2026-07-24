@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>S.A. Emergencial - Formulário</title>
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/sa-emergencial.css">
@@ -144,7 +143,7 @@
                     <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
                     <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
                     <img class="signature-img" style="display: none;" alt="Assinatura">
-                    <button class="btn-assinar" onclick="abrirModalAssinatura('entregue')">✍️ Assinar como Entregue</button>
+                    <button class="btn-assinar" onclick="abrirPaginaAssinatura('entregue')">✍️ Assinar como Entregue</button>
                 </div>
 
                 <div class="assinatura-box" data-tipo="recebido">
@@ -152,45 +151,11 @@
                     <p><strong>Nome:</strong> <span class="signatario-nome">-</span></p>
                     <p><strong>Data:</strong> <span class="signatario-data">-</span></p>
                     <img class="signature-img" style="display: none;" alt="Assinatura">
-                    <button class="btn-assinar" onclick="abrirModalAssinatura('recebido')">✍️ Assinar como Recebido</button>
+                    <button class="btn-assinar" onclick="abrirPaginaAssinatura('recebido')">✍️ Assinar como Recebido</button>
                 </div>
             </div>
 
             <button class="btn-finalizar" onclick="finalizarSA()">✅ FINALIZAR S.A.</button>
-        </div>
-    </div>
-
-    <!-- TELA DE ASSINATURA (Página inteira) -->
-    <div class="signature-fullscreen" id="signatureFullscreen">
-        <div class="signature-fullscreen-content">
-            <div class="signature-fullscreen-header">
-                <h2>✍️ ASSINATURA</h2>
-                <button class="btn-close-signature" onclick="fecharAssinaturaFullscreen()">✕</button>
-            </div>
-            
-            <div class="signature-fullscreen-body">
-                <p style="text-align: center; color: #666; font-size: 14px; margin-bottom: 10px;">
-                    Assine no campo abaixo com o mouse ou dedo
-                </p>
-                <p style="text-align: center; color: #1a237e; font-weight: bold; font-size: 18px;" id="signatureTypeFullscreen">
-                    ENTREGUE POR
-                </p>
-                
-                <div class="form-group" style="margin: 10px 0;">
-                    <label>Nome do Signatário *</label>
-                    <input type="text" id="signatureNameFullscreen" placeholder="Digite seu nome completo" style="padding: 12px; font-size: 16px;">
-                </div>
-                
-                <div class="signature-pad-container-fullscreen">
-                    <canvas id="signatureCanvasFullscreen"></canvas>
-                </div>
-                
-                <div class="signature-actions-fullscreen">
-                    <button class="btn-clear-fullscreen" onclick="limparAssinaturaFullscreen()">🗑️ Limpar</button>
-                    <button class="btn-confirm-fullscreen" onclick="confirmarAssinaturaFullscreen()">✅ Confirmar</button>
-                    <button class="btn-cancel-fullscreen" onclick="fecharAssinaturaFullscreen()">❌ Cancelar</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -199,37 +164,16 @@
     <script>
         let manager;
         let numeroSA = null;
-        let tipoAssinaturaAtual = null;
-        let signaturePadFullscreen = null;
 
-        // Função para voltar ao painel
+        // ============================================
+        // FUNÇÕES DE NAVEGAÇÃO
+        // ============================================
+
         function voltarPainel() {
             window.location.href = 'index.html';
         }
 
-        // Função para mostrar erro na tela
-        function mostrarErro(mensagem) {
-            const body = document.querySelector('.sa-form-body');
-            body.innerHTML = `
-                <div style="text-align: center; padding: 60px 20px;">
-                    <p style="font-size: 48px;">❌</p>
-                    <h2 style="color: #f44336;">Erro ao carregar formulário</h2>
-                    <p style="color: #666; margin: 20px 0;">${mensagem}</p>
-                    <button onclick="window.location.href='index.html'" style="padding: 12px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                        ⬅ Voltar ao Painel
-                    </button>
-                    <button onclick="window.location.reload()" style="margin-left: 10px; padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
-                        🔄 Tentar Novamente
-                    </button>
-                </div>
-            `;
-        }
-
-        // ============================================
-        // FUNÇÕES DE ASSINATURA EM TELA CHEIA
-        // ============================================
-
-        function abrirModalAssinatura(tipo) {
+        function abrirPaginaAssinatura(tipo) {
             const nome = tipo === 'entregue' ? 
                 document.getElementById('colaborador').value : 
                 document.getElementById('solicitante').value;
@@ -238,83 +182,19 @@
                 alert('⚠️ Preencha o nome do colaborador/solicitante antes de assinar.');
                 return;
             }
-            
-            tipoAssinaturaAtual = tipo;
-            
-            // Mostrar tela cheia
-            const fullscreen = document.getElementById('signatureFullscreen');
-            fullscreen.classList.add('active');
-            
-            // Configurar texto
-            document.getElementById('signatureTypeFullscreen').textContent = 
-                tipo === 'entregue' ? 'ENTREGUE POR' : 'RECEBIDO POR';
-            document.getElementById('signatureNameFullscreen').value = nome;
-            
-            // Inicializar Signature Pad
-            const canvas = document.getElementById('signatureCanvasFullscreen');
-            
-            // Ajustar tamanho do canvas
-            const container = canvas.parentElement;
-            canvas.width = container.clientWidth - 20;
-            canvas.height = 300;
-            
-            signaturePadFullscreen = new SignaturePad(canvas, {
-                backgroundColor: 'rgba(255, 255, 255, 0)',
-                penColor: '#1a237e',
-                minWidth: 2,
-                maxWidth: 4
-            });
-            
-            // Limpar assinatura anterior
-            signaturePadFullscreen.clear();
-            
-            // Ajustar ao redimensionar
-            setTimeout(() => {
-                canvas.width = container.clientWidth - 20;
-                canvas.height = 300;
-                signaturePadFullscreen.resizeCanvas();
-            }, 100);
-        }
 
-        function fecharAssinaturaFullscreen() {
-            const fullscreen = document.getElementById('signatureFullscreen');
-            fullscreen.classList.remove('active');
-            tipoAssinaturaAtual = null;
-            if (signaturePadFullscreen) {
-                signaturePadFullscreen = null;
-            }
-        }
-
-        function limparAssinaturaFullscreen() {
-            if (signaturePadFullscreen) {
-                signaturePadFullscreen.clear();
-            }
-        }
-
-        async function confirmarAssinaturaFullscreen() {
-            if (!signaturePadFullscreen || signaturePadFullscreen.isEmpty()) {
-                alert('⚠️ Por favor, assine no campo acima.');
+            if (!manager.saAtual) {
+                alert('❌ Erro: S.A. não encontrada.');
                 return;
             }
-            
-            const nome = document.getElementById('signatureNameFullscreen').value.trim();
-            if (!nome) {
-                alert('⚠️ Por favor, informe o nome do signatário.');
-                return;
-            }
-            
-            try {
-                const assinaturaData = signaturePadFullscreen.toDataURL();
-                
-                // Chamar o manager para salvar
-                await manager.assinarDocumento(tipoAssinaturaAtual, nome, assinaturaData);
-                
-                fecharAssinaturaFullscreen();
-                manager.atualizarVisualizacaoAssinaturas();
-                alert('✅ Assinatura realizada com sucesso!');
-            } catch (error) {
-                alert('❌ Erro ao assinar: ' + error.message);
-            }
+
+            // Salvar dados antes de ir para assinatura
+            salvarDadosFormulario();
+
+            // Abrir página de assinatura
+            const numero = manager.saAtual.numero;
+            const url = `assinar.html?tipo=${tipo}&nome=${encodeURIComponent(nome)}&numero=${numero}`;
+            window.open(url, '_blank', 'width=800,height=700,scrollbars=yes');
         }
 
         // ============================================
@@ -330,7 +210,6 @@
             try {
                 const material = await manager.buscarMaterial(codigo);
                 if (material) {
-                    // Preencher campos e travá-los
                     const descricaoInput = row.querySelector('.item-descricao');
                     const unidadeInput = row.querySelector('.item-unidade');
                     const armazemInput = row.querySelector('.item-armazem');
@@ -339,12 +218,10 @@
                     unidadeInput.value = material.unidadeMedida || '';
                     armazemInput.value = material.armazem;
                     
-                    // Travar os campos (já são readonly, mas vamos garantir)
                     descricaoInput.style.backgroundColor = '#f5f5f5';
                     unidadeInput.style.backgroundColor = '#f5f5f5';
                     armazemInput.style.backgroundColor = '#f5f5f5';
                     
-                    // Mostrar pop-up com a descrição completa
                     mostrarPopupMaterial(material);
                 } else {
                     alert(`⚠️ Material com código "${codigo}" não encontrado!`);
@@ -358,7 +235,6 @@
         }
 
         function mostrarPopupMaterial(material) {
-            // Criar overlay do pop-up
             const overlay = document.createElement('div');
             overlay.className = 'popup-overlay';
             overlay.id = 'popupMaterial';
@@ -397,7 +273,6 @@
             
             document.body.appendChild(overlay);
             
-            // Fechar ao clicar fora
             overlay.addEventListener('click', function(e) {
                 if (e.target === overlay) {
                     fecharPopupMaterial();
@@ -481,6 +356,42 @@
         }
 
         // ============================================
+        // SALVAR DADOS DO FORMULÁRIO
+        // ============================================
+
+        function salvarDadosFormulario() {
+            if (!manager.saAtual) return;
+            
+            const sa = manager.saAtual;
+            
+            sa.colaborador = {
+                matricula: document.getElementById('matricula').value.trim(),
+                nome: document.getElementById('colaborador').value.trim(),
+                cpf: document.getElementById('cpf').value.trim(),
+                funcao: document.getElementById('funcao').value.trim(),
+                filial: document.getElementById('filial').value.trim(),
+                centroCusto: document.getElementById('centroCusto').value.trim()
+            };
+            
+            sa.solicitante = document.getElementById('solicitante').value.trim();
+            sa.dataSolicitacao = document.getElementById('dataSolicitacao').value;
+            
+            sa.itens = [];
+            document.querySelectorAll('#itemsBody tr').forEach(row => {
+                const codigo = row.querySelector('.item-codigo').value.trim();
+                const descricao = row.querySelector('.item-descricao').value.trim();
+                const unidadeMedida = row.querySelector('.item-unidade').value.trim();
+                const quantidade = parseInt(row.querySelector('.item-quantidade').value) || 0;
+                const armazem = row.querySelector('.item-armazem').value.trim();
+                const ca = row.querySelector('.item-ca').value.trim();
+                
+                if (codigo && descricao) {
+                    sa.itens.push({ codigo, descricao, unidadeMedida, quantidade, armazem, ca });
+                }
+            });
+        }
+
+        // ============================================
         // FINALIZAR SA
         // ============================================
 
@@ -491,36 +402,12 @@
             }
             
             try {
-                // Salvar dados do formulário
-                const sa = manager.saAtual;
-                
-                sa.colaborador = {
-                    matricula: document.getElementById('matricula').value.trim(),
-                    nome: document.getElementById('colaborador').value.trim(),
-                    cpf: document.getElementById('cpf').value.trim(),
-                    funcao: document.getElementById('funcao').value.trim(),
-                    filial: document.getElementById('filial').value.trim(),
-                    centroCusto: document.getElementById('centroCusto').value.trim()
-                };
-                
-                sa.solicitante = document.getElementById('solicitante').value.trim();
-                sa.dataSolicitacao = document.getElementById('dataSolicitacao').value;
-                
-                sa.itens = [];
-                document.querySelectorAll('#itemsBody tr').forEach(row => {
-                    const codigo = row.querySelector('.item-codigo').value.trim();
-                    const descricao = row.querySelector('.item-descricao').value.trim();
-                    const unidadeMedida = row.querySelector('.item-unidade').value.trim();
-                    const quantidade = parseInt(row.querySelector('.item-quantidade').value) || 0;
-                    const armazem = row.querySelector('.item-armazem').value.trim();
-                    const ca = row.querySelector('.item-ca').value.trim();
-                    
-                    if (codigo && descricao) {
-                        sa.itens.push({ codigo, descricao, unidadeMedida, quantidade, armazem, ca });
-                    }
-                });
+                // Salvar dados antes de finalizar
+                salvarDadosFormulario();
                 
                 // Validar campos obrigatórios
+                const sa = manager.saAtual;
+                
                 if (!sa.colaborador.matricula || !sa.colaborador.nome || !sa.colaborador.cpf) {
                     alert('⚠️ Preencha todos os dados do colaborador!');
                     return;
@@ -534,6 +421,19 @@
                 if (sa.itens.length === 0) {
                     alert('⚠️ Adicione pelo menos um item!');
                     return;
+                }
+                
+                // Verificar se há assinatura pendente no sessionStorage
+                const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
+                if (assinaturaPendente) {
+                    const dadosAssinatura = JSON.parse(assinaturaPendente);
+                    const tipo = dadosAssinatura.tipo;
+                    const nome = dadosAssinatura.nome;
+                    const assinatura = dadosAssinatura.assinatura;
+                    
+                    // Aplicar assinatura
+                    await manager.assinarDocumento(tipo, nome, assinatura);
+                    sessionStorage.removeItem('assinatura_temp');
                 }
                 
                 // Salvar dados no D1
@@ -556,6 +456,21 @@
         document.addEventListener('DOMContentLoaded', async function() {
             manager = window.saManager;
             
+            // Verificar se há assinatura retornando
+            const assinaturaPendente = sessionStorage.getItem('assinatura_temp');
+            if (assinaturaPendente) {
+                try {
+                    const dados = JSON.parse(assinaturaPendente);
+                    // Aplicar assinatura automaticamente
+                    await manager.assinarDocumento(dados.tipo, dados.nome, dados.assinatura);
+                    sessionStorage.removeItem('assinatura_temp');
+                    manager.atualizarVisualizacaoAssinaturas();
+                    alert('✅ Assinatura aplicada com sucesso!');
+                } catch (error) {
+                    console.error('Erro ao aplicar assinatura:', error);
+                }
+            }
+            
             try {
                 // Verificar se é nova SA ou edição
                 const params = new URLSearchParams(window.location.search);
@@ -564,7 +479,6 @@
                 await manager.carregarUsuarioLogado();
                 
                 if (numero) {
-                    // Editar SA existente
                     numeroSA = parseInt(numero);
                     const sa = await manager.buscarSA(numeroSA);
                     if (sa) {
@@ -575,7 +489,6 @@
                         window.location.href = 'index.html';
                     }
                 } else {
-                    // Nova SA - verificar permissão
                     const podeCriar = await manager.verificarPermissaoGerar(manager.usuarioAtual);
                     if (!podeCriar) {
                         alert('⚠️ Apenas usuários cadastrados podem criar novas S.A.');
@@ -591,7 +504,6 @@
                     }
                 }
                 
-                // Atualizar assinaturas
                 manager.atualizarVisualizacaoAssinaturas();
                 
             } catch (error) {
@@ -625,16 +537,22 @@
             }
         }
 
-        // Redimensionar canvas ao redimensionar a tela
-        window.addEventListener('resize', function() {
-            if (signaturePadFullscreen) {
-                const canvas = document.getElementById('signatureCanvasFullscreen');
-                const container = canvas.parentElement;
-                canvas.width = container.clientWidth - 20;
-                canvas.height = 300;
-                signaturePadFullscreen.resizeCanvas();
-            }
-        });
+        function mostrarErro(mensagem) {
+            const body = document.querySelector('.sa-form-body');
+            body.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <p style="font-size: 48px;">❌</p>
+                    <h2 style="color: #f44336;">Erro ao carregar formulário</h2>
+                    <p style="color: #666; margin: 20px 0;">${mensagem}</p>
+                    <button onclick="window.location.href='index.html'" style="padding: 12px 30px; background: #1a237e; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        ⬅ Voltar ao Painel
+                    </button>
+                    <button onclick="window.location.reload()" style="margin-left: 10px; padding: 12px 30px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        🔄 Tentar Novamente
+                    </button>
+                </div>
+            `;
+        }
     </script>
 </body>
 </html>
