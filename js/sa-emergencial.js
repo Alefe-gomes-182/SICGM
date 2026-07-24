@@ -2,9 +2,9 @@
 // S.A. EMERGENCIAL - JavaScript
 // ============================================
 
-// Configuração
+// Configuração - URL REAL DA SUA API
 const SA_CONFIG = {
-    API_URL: 'https://sa-emergencial-api.seu-usuario.workers.dev/api',
+    API_URL: 'https://fancy-unit-799b.alefe-gomes-72f.workers.dev/api',
     colaboradoresPath: '../data/colaboradores-s-a.txt',
     materiaisPath: '../data/materiais-proprios.txt',
     usuariosAutorizadosPath: '../data/usuarios-autorizados.txt'
@@ -151,7 +151,6 @@ class SAManager {
             return await response.json();
         } catch (error) {
             console.error('❌ Erro na requisição:', error);
-            // Lançar o erro para ser tratado pelo chamador
             throw new Error(`Não foi possível conectar à API: ${error.message}`);
         }
     }
@@ -178,7 +177,6 @@ class SAManager {
     async listarSA() {
         try {
             const resultado = await this.request('/sa');
-            // Garantir que retorna um array
             if (Array.isArray(resultado)) {
                 return resultado;
             }
@@ -299,7 +297,6 @@ class SAManager {
             throw new Error('Nenhuma S.A. carregada para finalizar');
         }
         
-        // Verificar se ambas assinaturas foram feitas
         const entregue = this.saAtual.termoResponsabilidade?.entreguePor;
         const recebido = this.saAtual.termoResponsabilidade?.recebidoPor;
         
@@ -325,7 +322,6 @@ class SAManager {
     // ============================================
 
     renderizarLista(dados, container) {
-        // Garantir que dados é um array
         if (!Array.isArray(dados)) {
             console.error('❌ dados não é um array:', dados);
             container.innerHTML = `
