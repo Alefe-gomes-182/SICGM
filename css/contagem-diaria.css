@@ -2235,3 +2235,44 @@
         font-size: 0.7em;
     }
 }
+
+/* ============================================ */
+/* BOTÃO REMOVER TRAFO/BOBINA (X) - CORRIGIDO  */
+/* ============================================ */
+
+.btn-remover-trafo-x {
+    background: none;
+    border: none;
+    color: #FF4444;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    background: #FFF5F5;
+    border: 1px solid #FED7D7;
+}
+
+.btn-remover-trafo-x:hover {
+    background-color: #FF4444;
+    color: white;
+    transform: scale(1.1);
+    border-color: #FF4444;
+}
+
+.btn-remover-trafo-x:active {
+    transform: scale(0.95);
+}
+
+.btn-remover-trafo-x:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}

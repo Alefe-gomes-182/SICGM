@@ -330,7 +330,8 @@ if (document.getElementById('contagemForm')) {
         const modalDescricao = document.getElementById('modal-descricao');
         const modalTombamento = document.getElementById('modal-tombamento');
         const modalTombamentoRow = document.getElementById('modal-tombamento-row');
-        const modalInput = document.getElementById('modal-n-obra');
+        const modalInputNObra = document.getElementById('modal-n-obra');
+        const modalInputObservacao = document.getElementById('modal-observacao');
         const modalConfirmar = document.getElementById('modal-confirmar');
         const modalCancelar = document.getElementById('modal-cancelar');
         const modalError = document.getElementById('modal-error');
@@ -356,8 +357,9 @@ if (document.getElementById('contagemForm')) {
         }
         
         // Resetar campos
-        modalInput.value = '';
-        modalInput.classList.remove('input-error');
+        modalInputNObra.value = '';
+        modalInputObservacao.value = '';
+        modalInputNObra.classList.remove('input-error');
         modalError.classList.remove('show');
         modalError.style.display = 'none';
         modalConfirmar.disabled = false;
@@ -370,7 +372,8 @@ if (document.getElementById('contagemForm')) {
             tipoMaterial: tipoMaterial,
             id: idRegistro,
             codigo: codigo,
-            descricao: descricao
+            descricao: descricao,
+            observacao: ''
         };
         
         // Abrir modal
@@ -379,7 +382,7 @@ if (document.getElementById('contagemForm')) {
         
         // Focar no input após animação
         setTimeout(() => {
-            modalInput.focus();
+            modalInputNObra.focus();
         }, 300);
         
         // Eventos
@@ -391,7 +394,17 @@ if (document.getElementById('contagemForm')) {
             fecharModalBaixa();
         };
         
-        modalInput.onkeydown = function(e) {
+        modalInputNObra.onkeydown = function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                modalInputObservacao.focus();
+            }
+            if (e.key === 'Escape') {
+                fecharModalBaixa();
+            }
+        };
+        
+        modalInputObservacao.onkeydown = function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 confirmarBaixa();
@@ -413,28 +426,30 @@ if (document.getElementById('contagemForm')) {
     // ============================================
     
     function confirmarBaixa() {
-        const modalInput = document.getElementById('modal-n-obra');
+        const modalInputNObra = document.getElementById('modal-n-obra');
+        const modalInputObservacao = document.getElementById('modal-observacao');
         const modalError = document.getElementById('modal-error');
         const modalConfirmar = document.getElementById('modal-confirmar');
         
-        const nObra = modalInput.value.trim();
+        const nObra = modalInputNObra.value.trim();
+        const observacao = modalInputObservacao.value.trim();
         
         // Validar Nº da Obra
         if (!nObra) {
-            modalInput.classList.add('input-error');
+            modalInputNObra.classList.add('input-error');
             modalError.textContent = '⚠️ O Nº da Obra é obrigatório para dar baixa.';
             modalError.classList.add('show');
             modalError.style.display = 'block';
-            modalInput.focus();
+            modalInputNObra.focus();
             return;
         }
         
         if (nObra.length < 2) {
-            modalInput.classList.add('input-error');
+            modalInputNObra.classList.add('input-error');
             modalError.textContent = '⚠️ Digite um Nº de obra válido (mínimo 2 caracteres).';
             modalError.classList.add('show');
             modalError.style.display = 'block';
-            modalInput.focus();
+            modalInputNObra.focus();
             return;
         }
         
@@ -447,6 +462,9 @@ if (document.getElementById('contagemForm')) {
             fecharModalBaixa();
             return;
         }
+        
+        // Salvar observação no pendente
+        baixaPendente.observacao = observacao;
         
         executarBaixa(baixaPendente.id, nObra, baixaPendente.tipoMaterial, baixaPendente.tipo, baixaPendente.index);
     }
@@ -461,12 +479,14 @@ if (document.getElementById('contagemForm')) {
         document.body.style.overflow = '';
         
         // Resetar campos
-        const modalInput = document.getElementById('modal-n-obra');
+        const modalInputNObra = document.getElementById('modal-n-obra');
+        const modalInputObservacao = document.getElementById('modal-observacao');
         const modalError = document.getElementById('modal-error');
         const modalConfirmar = document.getElementById('modal-confirmar');
         
-        modalInput.value = '';
-        modalInput.classList.remove('input-error');
+        modalInputNObra.value = '';
+        modalInputObservacao.value = '';
+        modalInputNObra.classList.remove('input-error');
         modalError.classList.remove('show');
         modalError.style.display = 'none';
         modalConfirmar.disabled = false;
@@ -483,12 +503,18 @@ if (document.getElementById('contagemForm')) {
         try {
             console.log(`🔴 Executando baixa: ID ${id}, Obra: ${nObra}, Tipo: ${tipoMaterial}`);
             
+            // Monta a mensagem final: Nº da Obra + Observação (se houver)
+            let obsFinal = `Baixa para obra: ${nObra}`;
+            if (baixaPendente && baixaPendente.observacao) {
+                obsFinal += ` - ${baixaPendente.observacao}`;
+            }
+            
             const response = await fetch(`${API_URL}/api/desativar`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     id: parseInt(id),
-                    obs: `Baixa para obra: ${nObra}`,
+                    obs: obsFinal,
                     tipo_material: tipoMaterial
                 })
             });
@@ -549,7 +575,8 @@ if (document.getElementById('contagemForm')) {
                     
                     const justificativaInput = item.querySelector('.input-justificativa');
                     if (justificativaInput) {
-                        justificativaInput.value = `Baixa para obra: ${nObra}`;
+                        const obsTexto = baixaPendente && baixaPendente.observacao ? ` - ${baixaPendente.observacao}` : '';
+                        justificativaInput.value = `Baixa para obra: ${nObra}${obsTexto}`;
                         justificativaInput.setAttribute('readonly', 'readonly');
                         justificativaInput.style.backgroundColor = '#edf2f7';
                         justificativaInput.style.cursor = 'not-allowed';
@@ -1496,7 +1523,6 @@ if (document.getElementById('contagemForm')) {
         }
         
         // CORREÇÃO: NÃO BLOQUEIA MAIS O ENVIO, APENAS EXIBE O AVISO
-        // O indicador de erro continua sendo exibido, mas não interrompe o fluxo
         if (Math.abs(total - diferenca) > 0.001) {
             diferencaDiv.style.display = 'flex';
             diferencaDiv.className = 'diferenca-indicador diferenca-erro';
@@ -2515,100 +2541,73 @@ if (document.getElementById('contagemForm')) {
         });
     }
     
+    // ============================================
+    // REMOVER BOBINA (ANTES DE REGISTRAR)
+    // ============================================
+    
     function removerBobina(index) {
         const bobina = bobinasManuais[index];
         const codigo = bobina?.codigo || '';
+        const idRegistro = bobina?.id || null;
         
-        if (codigo && codigoExisteNoBanco(codigo)) {
+        // Verifica se já está registrado no banco
+        if (idRegistro && idRegistro !== 'null' && idRegistro !== null) {
+            mostrarToast('❌ Esta bobina já está registrada no banco de dados e não pode ser removida. Use a opção "Dar baixa" para desativá-la.', 'erro');
+            return;
+        }
+        
+        if (codigo && codigosExistentesDB.has(codigo)) {
             mostrarToast('❌ Esta bobina já está registrada no banco de dados e não pode ser removida. Use a opção "Dar baixa" para desativá-la.', 'erro');
             return;
         }
         
         if (confirm('Tem certeza que deseja remover esta bobina? Esta ação não pode ser desfeita.')) {
+            // Remove do array
             bobinasManuais.splice(index, 1);
             materiaisPorCategoria['bobinas'] = bobinasManuais;
             
+            // Re-renderiza a aba de bobinas
             const tabBobinas = document.getElementById('tab-diaria-bobinas');
             if (tabBobinas) {
                 tabBobinas.innerHTML = renderizarBobinas(bobinasManuais);
+                atualizarContadorBobinas();
             }
-            atualizarContadorBobinas();
             
             mostrarToast('✅ Bobina removida com sucesso!', 'sucesso');
         }
     }
     
-    function adicionarTrafo() {
-        console.log('🔧 Função adicionarTrafo chamada');
-        
-        salvarDadosTrafosAtuais();
-        
-        const novoTrafo = {
-            codigo: '',
-            descricao: '',
-            und: '',
-            numero_serie: '',
-            tombamento: '',
-            oleo: '',
-            cor: '',
-            ativo: true,
-            isNew: true,
-            _qtd: '',
-            _n_obra: '',
-            tipo_material: 'trafo',
-            id: null,
-            _jaRegistrado: false
-        };
-        
-        materiaisManuais.unshift(novoTrafo);
-        materiaisPorCategoria['trafos'] = materiaisManuais;
-        
-        const tabTrafos = document.getElementById('tab-diaria-trafos');
-        if (tabTrafos) {
-            tabTrafos.innerHTML = renderizarTrafos(materiaisManuais);
-            atualizarContadorTrafos();
-            
-            setTimeout(() => {
-                materiaisManuais.forEach((material, index) => {
-                    if (material.codigo) {
-                        buscarQuantidadeAnterior(material.codigo, `trafos-${index}`, material.tombamento, 'trafo');
-                    }
-                    if (material._qtd) {
-                        const idUnico = `trafos-${index}`;
-                        calcularDiferencaTrafo(idUnico, material.codigo);
-                    }
-                });
-            }, 100);
-            
-            const primeiroItem = tabTrafos.querySelector('.trafo-item:first-child');
-            if (primeiroItem) {
-                primeiroItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                const novoCodigoInput = primeiroItem.querySelector('#trafo-codigo-0');
-                if (novoCodigoInput) {
-                    setTimeout(() => novoCodigoInput.focus(), 300);
-                }
-            }
-        }
-    }
+    // ============================================
+    // REMOVER TRAFO (ANTES DE REGISTRAR)
+    // ============================================
     
     function removerTrafo(index) {
         const trafo = materiaisManuais[index];
         const codigo = trafo?.codigo || '';
+        const idRegistro = trafo?.id || null;
         
-        if (codigo && codigoExisteNoBanco(codigo)) {
+        // Verifica se já está registrado no banco
+        if (idRegistro && idRegistro !== 'null' && idRegistro !== null) {
+            mostrarToast('❌ Este trafo já está registrado no banco de dados e não pode ser removido. Use a opção "Dar baixa" para desativá-lo.', 'erro');
+            return;
+        }
+        
+        if (codigo && codigosExistentesDB.has(codigo)) {
             mostrarToast('❌ Este trafo já está registrado no banco de dados e não pode ser removido. Use a opção "Dar baixa" para desativá-lo.', 'erro');
             return;
         }
         
         if (confirm('Tem certeza que deseja remover este trafo? Esta ação não pode ser desfeita.')) {
+            // Remove do array
             materiaisManuais.splice(index, 1);
             materiaisPorCategoria['trafos'] = materiaisManuais;
             
+            // Re-renderiza a aba de trafos
             const tabTrafos = document.getElementById('tab-diaria-trafos');
             if (tabTrafos) {
                 tabTrafos.innerHTML = renderizarTrafos(materiaisManuais);
+                atualizarContadorTrafos();
             }
-            atualizarContadorTrafos();
             
             mostrarToast('✅ Trafo removido com sucesso!', 'sucesso');
         }
@@ -3497,7 +3496,7 @@ if (document.getElementById('contagemForm')) {
             }
         });
         
-        // MISCELÂNEAS
+        // MISCELÂNEAS (Contagem Semanal) - SEM TRAVA, SEMPRE ENVIA
         const miscelaneaItems = document.querySelectorAll('.miscelanea-item');
         miscelaneaItems.forEach((item) => {
             const index = parseInt(item.dataset.index);
@@ -3506,18 +3505,17 @@ if (document.getElementById('contagemForm')) {
             const idUnico = `miscelaneas-${index}`;
             const qtdInput = document.getElementById(`qtd-${idUnico}`);
             if (!qtdInput) return;
-            if (qtdInput.value === '' || qtdInput.value === null || qtdInput.value === undefined) return;
             
-            const qtdAtual = parseFloat(qtdInput.value) || 0;
+            // Se o campo está vazio, null ou undefined, considera como 0
+            let qtdAtual = 0;
+            if (qtdInput.value !== '' && qtdInput.value !== null && qtdInput.value !== undefined) {
+                qtdAtual = parseFloat(qtdInput.value) || 0;
+            }
+            
             const codigo = item.dataset.codigo;
             
-            if (!itemFoiModificado(qtdInput, item)) {
-                console.log(`⏭️ Miscelânea ${codigo} não foi modificada - pulando`);
-                return;
-            }
-            if (qtdAtual === 0) return;
-            
-            console.log(`✅ Miscelânea ${codigo} - novo registro permitido (contagem múltipla)`);
+            // SEMPRE envia, mesmo que seja 0 ou não tenha sido "modificado"
+            console.log(`✅ Miscelânea ${codigo} - enviando contagem (QTD: ${qtdAtual})`);
             
             const entradaItems = document.querySelectorAll(`#concreto-entradas-list-${idUnico} .concreto-entrada-item`);
             let justificativaCompleta = '';
